@@ -13,6 +13,13 @@
   --color-emerald: var(--emerald);
   --color-emerald-foreground: var(--emerald-foreground);
   --color-sky: var(--sky);
+  --color-bb-paper: var(--bb-paper);
+  --color-bb-ink: var(--bb-ink);
+  --color-bb-white: var(--bb-white);
+  --color-bb-emerald: var(--bb-emerald);
+  --color-bb-sky: var(--bb-sky);
+  --color-bb-mint: var(--bb-mint);
+  --color-bb-muted: var(--bb-muted);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -59,6 +66,13 @@
   --ring: var(--emerald);
   --shadow-offset: 6px 6px 0 0 var(--ink);
   --shadow-offset-sm: 3px 3px 0 0 var(--ink);
+  --bb-paper: oklch(0.9768 0.0045 106);
+  --bb-ink: oklch(0 0 0);
+  --bb-white: oklch(1 0 0);
+  --bb-emerald: oklch(0.5754 0.1249 160.5);
+  --bb-sky: oklch(0.9204 0.0355 220);
+  --bb-mint: oklch(0.9354 0.043 160);
+  --bb-muted: oklch(0.5486 0.0119 106);
 }
 
 @layer base {
@@ -106,6 +120,12 @@
   border-radius: var(--radius);
 }
 
+@utility panel-sm {
+  border: 2px solid var(--bb-ink);
+  border-radius: var(--radius);
+  box-shadow: 3px 3px 0 0 var(--bb-ink);
+}
+
 @utility offset {
   box-shadow: var(--shadow-offset);
 }
@@ -120,6 +140,68 @@
   font-size: 0.6875rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+
+.flyer-page {
+  width: 8.5in;
+  height: 11in;
+  background-color: var(--bb-paper);
+  color: var(--bb-ink);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  position: relative;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+#qr-code-slot {
+  aspect-ratio: 1 / 1;
+  background: #ffffff;
+}
+
+@page {
+  size: Letter portrait;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .flyer-shell {
+    background: #fff !important;
+    display: block !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+
+  .flyer-preview-shell {
+    background: #fff !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+
+  .flyer-scaler {
+    height: 11in !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    width: 8.5in !important;
+  }
+
+  .flyer-page {
+    box-shadow: none !important;
+    page-break-after: avoid;
+    transform: none !important;
+    transform-origin: top left !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
 }
 
 @utility bb-input {

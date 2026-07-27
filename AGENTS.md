@@ -20,6 +20,11 @@
   page must ask the scanner to sign in or register, then call `bayblaze-api` to
   attach the code to that BayBlaze account. Once a code is claimed, the same
   claim URL should send future scanners to `/?ref=<affiliate-code>`.
+- Printable referral flyers live at `/flyer` for a blank template and
+  `/flyer/{refCode}` for a personalized QR flyer. Flyer QR codes point to
+  `https://nfc.bayblaze.net/r/{refCode}`. The `/r/{refCode}` route sets the
+  `bayblaze_ref` cookie and redirects to `/?ref={refCode}` so the existing
+  `bb_nfc_attribution` validation flow remains authoritative.
 - Google sign-in starts at `/api/auth/oauth/google/start` and completes on the
   app route `/auth/google/callback`. Configure Google Cloud and `bayblaze-api`
   with the exact redirect URI

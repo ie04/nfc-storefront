@@ -11,6 +11,14 @@ The frontend visual system is based on the `ie04/bayblaze-nfc-revamp` design:
 Space Grotesk headings, DM Sans body text, paper/ink/emerald/sky colors, hard
 black borders, offset shadows, and rendered NFC tag product art.
 
+## Referral Flyers
+
+- `/flyer` renders a blank print-ready US Letter flyer template.
+- `/flyer/[refCode]` renders a personalized flyer with a QR code.
+- The QR code points to `https://nfc.bayblaze.net/r/[refCode]`.
+- `/r/[refCode]` sets `bayblaze_ref` and redirects to `/?ref=[refCode]`, where
+  the existing NFC attribution flow validates and persists checkout attribution.
+
 ## Local Development
 
 ```bash
