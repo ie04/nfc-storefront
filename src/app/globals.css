@@ -1,0 +1,88 @@
+@import "@fontsource/jost/400.css";
+@import "@fontsource/jost/500.css";
+@import "@fontsource/jost/700.css";
+@import "@fontsource/jost/900.css";
+@import "tailwindcss";
+
+:root {
+  --bb-black: #090909;
+  --bb-cream: #fff7e6;
+  --bb-green: #0fa866;
+  --bb-lime: #d7ff4f;
+  --bb-red: #f04438;
+  --bb-muted: #5f5f5f;
+  --bb-line: #111111;
+  --bb-sky: #dff6ff;
+  --bb-yellow: #ffe45c;
+  --bb-pink: #ffd4e5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bb-cream);
+  color: var(--bb-black);
+  font-family: Jost, Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.bb-panel {
+  border: 2px solid var(--bb-line);
+  background: white;
+  box-shadow: 5px 5px 0 var(--bb-black);
+}
+
+.bb-card {
+  border: 2px solid var(--bb-line);
+  background: white;
+}
+
+.bb-input {
+  width: 100%;
+  border: 2px solid var(--bb-line);
+  background: white;
+  padding: 0.8rem 0.9rem;
+  font-weight: 700;
+  outline: none;
+}
+
+.bb-input:focus,
+.bb-button:focus-visible {
+  outline: 3px solid var(--bb-lime);
+  outline-offset: 2px;
+}
+
+.bb-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bb-line);
+  background: white;
+  padding: 0.75rem 1rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.bb-button-primary {
+  background: var(--bb-green);
+  color: white;
+}
+
+.bb-button-dark {
+  background: var(--bb-black);
+  color: white;
+}
+
+.bb-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
