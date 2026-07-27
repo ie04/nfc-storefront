@@ -2,13 +2,25 @@
 
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import { clearAttributionCookie, readAttributionCookie, writeAttributionCookie } from "@/app/lib/attribution";
 import type { FulfillmentMethod, NfcAddress, NfcCustomer, NfcDesign, ProductType, QuoteResponse } from "@/app/lib/contracts";
 import { createOrder, quoteOrder, resolveAttribution, uploadDesignAsset } from "@/app/lib/api";
 import { formatMoney } from "@/app/lib/format";
-import { initialAddress, initialCustomer, initialDesign, productLabels, validateAddress, validateCustomer, validateDesign } from "@/app/lib/form-model";
+import {
+  buildProgrammedDestination,
+  initialAddress,
+  initialCustomer,
+  initialDesign,
+  productLabels,
+  socialPlatformLabels,
+  usesGuidedDestination,
+  validateAddress,
+  validateCustomer,
+  validateDesign,
+} from "@/app/lib/form-model";
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
@@ -54,10 +66,11 @@ export default function CheckoutFlow({ referralCode }: { referralCode?: string }
     ...validateAddress(address, method),
   }), [address, customer, design, method]);
   const canCreate = Object.keys(formErrors).length === 0 && !clientSecret;
+  const submissionDesign = useMemo(() => prepareDesignForApi(design), [design]);
 
   async function refreshQuote(nextMethod = method) {
     setError("");
-    const nextQuote = await quoteOrder({ address, attributionToken, design, method: nextMethod });
+    const nextQuote = await quoteOrder({ address, attributionToken, design: submissionDesign, method: nextMethod });
     setQuote(nextQuote);
     if (nextMethod === "local_delivery" && nextQuote.fulfillmentEligibility.fulfillmentMethod !== "local_delivery") {
       setMethod("usps_standard");
@@ -98,7 +111,7 @@ export default function CheckoutFlow({ referralCode }: { referralCode?: string }
         address,
         attributionToken,
         customer,
-        design,
+        design: submissionDesign,
         idempotencyKey: crypto.randomUUID(),
         method,
       });
@@ -114,23 +127,46 @@ export default function CheckoutFlow({ referralCode }: { referralCode?: string }
 
   return (
     <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_390px] lg:px-8">
-      <main className="bb-panel p-4 sm:p-6" aria-labelledby="order-title">
-        <p className="font-black uppercase tracking-[0.18em] text-[var(--bb-green)]">BayBlaze NFC</p>
-        <h1 className="mt-2 text-4xl font-black leading-none sm:text-6xl" id="order-title">Tap-ready tags, made local.</h1>
-        <p className="mt-4 max-w-2xl text-base font-medium text-[var(--bb-muted)]">Configure a tag, choose delivery or USPS, and pay with embedded Stripe checkout.</p>
+      <main className="grid gap-5" aria-labelledby="order-title">
+        <section className="bb-panel overflow-hidden p-0">
+          <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="p-5 sm:p-8">
+              <p className="font-black uppercase tracking-[0.18em] text-[var(--bb-green)]">BayBlaze NFC</p>
+              <h1 className="mt-3 max-w-3xl text-4xl font-black leading-none sm:text-6xl" id="order-title">Custom NFC tags that point people exactly where you want.</h1>
+              <p className="mt-4 max-w-2xl text-lg font-semibold leading-7 text-[var(--bb-muted)]">
+                Pick a tag style, tell us where it should send people, then choose how you want it delivered.
+              </p>
+            </div>
+            <div className="border-t-2 border-black bg-[var(--bb-sky)] p-5 lg:border-l-2 lg:border-t-0">
+              <h2 className="text-lg font-black uppercase">How it works</h2>
+              <ol className="mt-4 grid gap-3">
+                <ProcessStep number="1" title="Choose the tag" copy="Select a plain, social, or fully custom design." />
+                <ProcessStep number="2" title="Set the destination" copy="Send taps to a website or social profile. We show a preview before payment." />
+                <ProcessStep number="3" title="Review and pay" copy="Confirm delivery, check the total, and complete your order." />
+              </ol>
+            </div>
+          </div>
+        </section>
 
         {message ? <p className="mt-4 border-2 border-[var(--bb-line)] bg-[var(--bb-lime)] p-3 font-black">{message}</p> : null}
         {error ? <p className="mt-4 border-2 border-[var(--bb-red)] bg-white p-3 font-black text-[var(--bb-red)]">{error}</p> : null}
 
-        <section className="mt-8 grid gap-6">
+        <section className="bb-panel grid gap-6 p-4 sm:p-6" aria-labelledby="step-one-title">
+          <StepHeading eyebrow="Step 1" title="Choose your tag style" />
           <fieldset>
-            <legend className="text-sm font-black uppercase tracking-wider">Tag Type</legend>
-            <div className="mt-3 grid gap-3 sm:grid-cols-5">
+            <legend className="sr-only" id="step-one-title">Choose your tag style</legend>
+            <div className="grid gap-3 sm:grid-cols-5">
               {(Object.keys(productLabels) as ProductType[]).map((type) => (
                 <button
                   className={`bb-button ${design.productType === type ? "bb-button-dark" : ""}`}
                   key={type}
-                  onClick={() => setDesign((current) => ({ ...current, customColors: type === "custom" ? false : current.customColors, productType: type }))}
+                  onClick={() => setDesign((current) => ({
+                    ...current,
+                    customColors: type === "custom" ? false : current.customColors,
+                    destinationKind: type === "instagram" || type === "snapchat" || type === "x" ? "social" : current.destinationKind || "website",
+                    socialPlatform: type === "instagram" || type === "snapchat" || type === "x" ? type : current.socialPlatform || "instagram",
+                    productType: type,
+                  }))}
                   type="button"
                 >
                   {productLabels[type]}
@@ -138,12 +174,6 @@ export default function CheckoutFlow({ referralCode }: { referralCode?: string }
               ))}
             </div>
           </fieldset>
-
-          <label className="grid gap-2 font-black">
-            {design.productType === "plain" ? "Full website URL" : "Account handle or profile URL"}
-            <input className="bb-input" onChange={(event) => setDesign({ ...design, programmedDestination: event.target.value })} value={design.programmedDestination} />
-            {quote?.normalizedDestination ? <span className="text-sm font-bold text-[var(--bb-muted)]">Preview: {quote.normalizedDestination}</span> : null}
-          </label>
 
           {design.productType !== "custom" ? (
             <div className="bb-card bg-[var(--bb-sky)] p-4">
@@ -174,12 +204,20 @@ export default function CheckoutFlow({ referralCode }: { referralCode?: string }
               ) : null}
             </div>
           )}
+        </section>
+
+        <section className="bb-panel grid gap-6 p-4 sm:p-6" aria-labelledby="step-two-title">
+          <StepHeading eyebrow="Step 2" title="Tell us where the tag should go" />
+          <DestinationFields design={design} quote={quote} setDesign={setDesign} />
 
           <label className="grid gap-2 font-black">
-            Additional comments
+            Anything else we should know?
             <textarea className="bb-input min-h-24" onChange={(event) => setDesign({ ...design, additionalComments: event.target.value })} value={design.additionalComments || ""} />
           </label>
+        </section>
 
+        <section className="bb-panel grid gap-6 p-4 sm:p-6" aria-labelledby="step-three-title">
+          <StepHeading eyebrow="Step 3" title="Contact and delivery" />
           <section className="grid gap-3 sm:grid-cols-3" aria-label="Customer information">
             <input aria-label="Full name" className="bb-input" onChange={(event) => setCustomer({ ...customer, fullName: event.target.value })} placeholder="Full name" value={customer.fullName} />
             <input aria-label="Email" className="bb-input" onChange={(event) => setCustomer({ ...customer, email: event.target.value })} placeholder="Email" value={customer.email} />
@@ -203,8 +241,8 @@ export default function CheckoutFlow({ referralCode }: { referralCode?: string }
           </section>
 
           <div className="flex flex-wrap gap-3">
-            <button className="bb-button" disabled={busy} onClick={() => void refreshQuote()} type="button">Update summary</button>
-            <button className="bb-button bb-button-primary" disabled={busy || !canCreate} onClick={() => void beginPayment()} type="button">Start payment</button>
+            <button className="bb-button" disabled={busy} onClick={() => void refreshQuote()} type="button">Review total</button>
+            <button className="bb-button bb-button-primary" disabled={busy || !canCreate} onClick={() => void beginPayment()} type="button">Continue to payment</button>
           </div>
 
           {clientSecret && stripePromise ? (
@@ -233,6 +271,149 @@ export default function CheckoutFlow({ referralCode }: { referralCode?: string }
       </aside>
     </div>
   );
+}
+
+function ProcessStep({ copy, number, title }: { copy: string; number: string; title: string }) {
+  return (
+    <li className="flex gap-3 border-2 border-black bg-white p-3">
+      <span className="grid size-9 shrink-0 place-items-center bg-black text-sm font-black text-white">{number}</span>
+      <span>
+        <span className="block font-black">{title}</span>
+        <span className="block text-sm font-bold text-[var(--bb-muted)]">{copy}</span>
+      </span>
+    </li>
+  );
+}
+
+function StepHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
+  return (
+    <div>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--bb-green)]">{eyebrow}</p>
+      <h2 className="mt-1 text-2xl font-black sm:text-3xl">{title}</h2>
+    </div>
+  );
+}
+
+function DestinationFields({
+  design,
+  quote,
+  setDesign,
+}: {
+  design: NfcDesign;
+  quote: QuoteResponse | null;
+  setDesign: Dispatch<SetStateAction<NfcDesign>>;
+}) {
+  const guided = usesGuidedDestination(design);
+  const social = design.destinationKind === "social";
+  const fixedSocial = design.productType === "instagram" || design.productType === "snapchat" || design.productType === "x";
+  const destinationValue = design.destinationInput ?? design.programmedDestination;
+
+  if (!guided) {
+    return (
+      <label className="grid gap-2 font-black">
+        {productLabels[design.productType]} handle or profile URL
+        <input
+          className="bb-input"
+          onChange={(event) => setDesign({ ...design, destinationInput: event.target.value, programmedDestination: event.target.value })}
+          placeholder={`@${design.productType === "x" ? "yourname" : "yourhandle"}`}
+          value={destinationValue || ""}
+        />
+        {quote?.normalizedDestination ? <span className="text-sm font-bold text-[var(--bb-muted)]">Preview: {quote.normalizedDestination}</span> : null}
+      </label>
+    );
+  }
+
+  return (
+    <div className="grid gap-4">
+      <fieldset>
+        <legend className="text-sm font-black uppercase tracking-wider">What should this tag open?</legend>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <CheckboxChoice
+            checked={design.destinationKind === "website"}
+            label="A website"
+            onChoose={() => setDesign({ ...design, destinationKind: "website" })}
+          />
+          <CheckboxChoice
+            checked={social}
+            label="A social media profile"
+            onChoose={() => setDesign({ ...design, destinationKind: "social", socialPlatform: design.socialPlatform || "instagram" })}
+          />
+        </div>
+      </fieldset>
+
+      {social ? (
+        <div className="grid gap-3">
+          <label className="grid gap-2 font-black">
+            Social media site
+            <select
+              className="bb-input"
+              disabled={fixedSocial}
+              onChange={(event) => setDesign({ ...design, socialPlatform: event.target.value })}
+              value={fixedSocial ? design.productType : design.socialPlatform || "instagram"}
+            >
+              {Object.entries(socialPlatformLabels).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          {(design.socialPlatform === "other" && !fixedSocial) ? (
+            <label className="grid gap-2 font-black">
+              Which site?
+              <input
+                className="bb-input"
+                onChange={(event) => setDesign({ ...design, socialOtherSite: event.target.value })}
+                placeholder="threads.net, pinterest.com, your community page..."
+                value={design.socialOtherSite || ""}
+              />
+            </label>
+          ) : null}
+          <label className="grid gap-2 font-black">
+            Handle or profile name
+            <input
+              className="bb-input"
+              onChange={(event) => setDesign({ ...design, destinationInput: event.target.value, programmedDestination: event.target.value })}
+              placeholder="@yourhandle"
+              value={destinationValue || ""}
+            />
+          </label>
+        </div>
+      ) : (
+        <label className="grid gap-2 font-black">
+          Website address
+          <input
+            className="bb-input"
+            onChange={(event) => setDesign({ ...design, destinationInput: event.target.value, programmedDestination: event.target.value })}
+            placeholder="https://yourwebsite.com"
+            value={destinationValue || ""}
+          />
+          <span className="text-sm font-bold text-[var(--bb-muted)]">Please double-check spelling before checkout. We program the tag exactly to the address you provide.</span>
+        </label>
+      )}
+
+      {quote?.normalizedDestination ? <p className="border-2 border-black bg-[var(--bb-lime)] p-3 text-sm font-black">Preview: {quote.normalizedDestination}</p> : null}
+    </div>
+  );
+}
+
+function CheckboxChoice({ checked, label, onChoose }: { checked: boolean; label: string; onChoose: () => void }) {
+  return (
+    <label className={`flex min-h-14 cursor-pointer items-center gap-3 border-2 border-black p-3 font-black ${checked ? "bg-black text-white" : "bg-white"}`}>
+      <input checked={checked} onChange={onChoose} type="checkbox" />
+      {label}
+    </label>
+  );
+}
+
+function prepareDesignForApi(design: NfcDesign): NfcDesign {
+  return {
+    additionalComments: design.additionalComments,
+    colorDescription: design.colorDescription,
+    customColors: design.productType === "custom" ? false : design.customColors,
+    customDesignDescription: design.customDesignDescription,
+    programmedDestination: buildProgrammedDestination(design),
+    productType: design.productType,
+    uploadedAssetId: design.uploadedAssetId,
+  };
 }
 
 function SummaryRow({ label, strong, value }: { label: string; strong?: boolean; value?: number }) {

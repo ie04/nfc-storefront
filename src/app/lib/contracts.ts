@@ -6,8 +6,12 @@ export type NfcDesign = {
   colorDescription?: string;
   customColors: boolean;
   customDesignDescription?: string;
+  destinationInput?: string;
+  destinationKind?: "social" | "website";
   programmedDestination: string;
   productType: ProductType;
+  socialOtherSite?: string;
+  socialPlatform?: string;
   uploadedAssetId?: string;
 };
 
