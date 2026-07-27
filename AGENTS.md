@@ -20,6 +20,10 @@
   page must ask the scanner to sign in or register, then call `bayblaze-api` to
   attach the code to that BayBlaze account. Once a code is claimed, the same
   claim URL should send future scanners to `/?ref=<affiliate-code>`.
+- The admin dashboard should load all created flyer claim QR codes from
+  `GET /v1/admin/partners/claim-codes` and render the full list with per-code
+  QR previews/actions. Do not regress to showing only the latest code generated
+  in local component state.
 - Printable referral flyers live at `/flyer` for a blank template and
   `/flyer/{refCode}` for a personalized QR flyer. Flyer QR codes point to
   `https://nfc.bayblaze.net/r/{refCode}`. The `/r/{refCode}` route sets the

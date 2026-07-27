@@ -140,12 +140,34 @@ export async function loadPartnerPortal(token: string): Promise<PartnerPortalDat
 }
 
 export async function loadAdminDashboard(token: string) {
+  const [summary, claimCodes] = await Promise.all([
+    request<{
+      commissionLedger: unknown[];
+      metrics: { orders: number; paidSalesCents: number; pendingCommissionsCents: number };
+      orders: unknown[];
+    }>("/v1/admin/nfc/summary", { token }),
+    listAdminPartnerClaimCodes(token).catch(() => ({ items: [], total: 0 })),
+  ]);
+
+  return {
+    ...summary,
+    claimCodes: claimCodes.items,
+  };
+}
+
+export async function listAdminPartnerClaimCodes(token: string) {
   return request<{
+    items: PartnerClaimCode[];
+    total: number;
+  }>("/v1/admin/partners/claim-codes?limit=100", { token });
+}
+
+export type AdminDashboardData = {
+  claimCodes: PartnerClaimCode[];
     commissionLedger: unknown[];
     metrics: { orders: number; paidSalesCents: number; pendingCommissionsCents: number };
     orders: unknown[];
-  }>("/v1/admin/nfc/summary", { token });
-}
+};
 
 export async function getPartnerClaimCode(code: string) {
   return request<{ claimCode: PartnerClaimCode }>(`/v1/partners/claim-codes/${encodeURIComponent(code)}`);

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
-import { createPartnerClaimCode, loadAdminDashboard, loadPartnerPortal, login, loginCustomer, registerCustomer } from "@/app/lib/api";
+import { createPartnerClaimCode, loadAdminDashboard, loadPartnerPortal, login, loginCustomer, registerCustomer, type PartnerClaimCode } from "@/app/lib/api";
 import type { PartnerPortalData } from "@/app/lib/contracts";
 import { formatDate, formatMoney } from "@/app/lib/format";
 
@@ -19,9 +19,7 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
   const [partner, setPartner] = useState<PartnerPortalData | null>(null);
   const [admin, setAdmin] = useState<Awaited<ReturnType<typeof loadAdminDashboard>> | null>(null);
   const [qr, setQr] = useState("");
-  const [claimQr, setClaimQr] = useState("");
-  const [claimUrl, setClaimUrl] = useState("");
-  const [claimCode, setClaimCode] = useState("");
+  const [claimQrs, setClaimQrs] = useState<Record<string, string>>({});
   const [claimBusy, setClaimBusy] = useState(false);
   const title = mode === "partner" ? "Affiliate Portal" : "NFC Admin";
   const subtitle = mode === "partner"
@@ -99,9 +97,15 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
     setClaimBusy(true);
     try {
       const result = await createPartnerClaimCode(token);
-      setClaimCode(result.claimCode.code);
-      setClaimUrl(result.claimCode.claimUrl);
-      setClaimQr(await QRCode.toDataURL(result.claimCode.claimUrl, { errorCorrectionLevel: "H", margin: 1, width: 720 }));
+      setAdmin((current) => current
+        ? {
+            ...current,
+            claimCodes: [
+              result.claimCode,
+              ...(current.claimCodes || []).filter((item) => item.code !== result.claimCode.code),
+            ],
+          }
+        : current);
       if (openFlyer) {
         window.open(`/flyer/claim/${encodeURIComponent(result.claimCode.code)}`, "_blank", "noopener,noreferrer");
         setMessage(`Claim flyer ${result.claimCode.code} opened in a new tab.`);
@@ -114,6 +118,29 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
       setClaimBusy(false);
     }
   }
+
+  useEffect(() => {
+    const claimCodes = admin?.claimCodes || [];
+    if (!claimCodes.length) {
+      return;
+    }
+    let cancelled = false;
+    Promise.all(
+      claimCodes.map(async (item) => [
+        item.code,
+        await QRCode.toDataURL(item.claimUrl, { errorCorrectionLevel: "H", margin: 1, width: 320 }),
+      ] as const),
+    )
+      .then((entries) => {
+        if (!cancelled) setClaimQrs(Object.fromEntries(entries));
+      })
+      .catch(() => {
+        if (!cancelled) setClaimQrs({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [admin?.claimCodes]);
 
   function signOut() {
     window.localStorage.removeItem("bb_account_token");
@@ -188,12 +215,13 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
         {mode === "admin" && admin ? (
           <AdminDashboard
             admin={admin}
-            claimCode={claimCode}
             claimBusy={claimBusy}
-            claimQr={claimQr}
-            claimUrl={claimUrl}
+            claimQrs={claimQrs}
             generateClaimCode={() => void generateClaimCode()}
             generateClaimFlyer={() => void generateClaimCode({ openFlyer: true })}
+            onCopyClaimLink={(url) => {
+              void navigator.clipboard.writeText(url).then(() => setMessage("Claim link copied."));
+            }}
           />
         ) : null}
       </main>
@@ -272,20 +300,20 @@ function PartnerDashboard({
 function AdminDashboard({
   admin,
   claimBusy,
-  claimCode,
-  claimQr,
-  claimUrl,
+  claimQrs,
   generateClaimCode,
   generateClaimFlyer,
+  onCopyClaimLink,
 }: {
   admin: Awaited<ReturnType<typeof loadAdminDashboard>>;
   claimBusy: boolean;
-  claimCode: string;
-  claimQr: string;
-  claimUrl: string;
+  claimQrs: Record<string, string>;
   generateClaimCode: () => void;
   generateClaimFlyer: () => void;
+  onCopyClaimLink: (url: string) => void;
 }) {
+  const claimCodes = admin.claimCodes || [];
+
   return (
     <div className="grid gap-6">
       <div className="grid gap-4 sm:grid-cols-3">
@@ -295,14 +323,16 @@ function AdminDashboard({
       </div>
 
       <section className="panel offset overflow-hidden">
-        <div className="grid gap-6 p-6 lg:grid-cols-[1fr_260px]">
-          <div>
-            <span className="eyebrow text-emerald">Flyer claim QR</span>
-            <h2 className="mt-2 text-3xl leading-[1.05]">Print a code before the affiliate has an account</h2>
-            <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-              When the flyer QR is scanned, the person can sign in or register and claim the referral code for future sales.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
+        <div className="border-b-2 border-ink bg-card p-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <span className="eyebrow text-emerald">Claim codes</span>
+              <h2 className="mt-2 text-3xl leading-[1.05]">Created flyer QR codes</h2>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                {claimCodes.length} flyer QR code{claimCodes.length === 1 ? "" : "s"} ready to print, share, or review.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
               <button
                 className="bb-button bb-button-primary offset-sm hover:-translate-x-[2px] hover:-translate-y-[2px]"
                 disabled={claimBusy}
@@ -321,18 +351,24 @@ function AdminDashboard({
               </button>
             </div>
           </div>
-          {claimQr ? (
-            <div>
-              <img alt={`Claim QR code ${claimCode}`} className="w-full border-2 border-ink bg-card" src={claimQr} />
-              <p className="mt-3 font-display font-bold">Code: {claimCode}</p>
-            </div>
-          ) : (
-            <div className="flex min-h-48 items-center justify-center border-2 border-dashed border-ink bg-paper-deep p-4 text-center font-display text-sm font-bold text-muted-foreground">
-              QR preview appears here.
-            </div>
-          )}
         </div>
-        {claimUrl ? <p className="border-t-2 border-ink bg-paper-deep p-4 font-mono text-xs break-all">{claimUrl}</p> : null}
+
+        {claimCodes.length ? (
+          <div className="grid gap-4 bg-paper-deep p-4 sm:grid-cols-2 xl:grid-cols-3">
+            {claimCodes.map((item) => (
+              <ClaimCodeCard
+                item={item}
+                key={item.code}
+                onCopyClaimLink={onCopyClaimLink}
+                qr={claimQrs[item.code] || ""}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-paper-deep p-6">
+            <EmptyState copy="No flyer QR codes have been created yet." />
+          </div>
+        )}
       </section>
 
       <section className="panel offset p-6">
@@ -345,6 +381,75 @@ function AdminDashboard({
         <DataTable empty="No commission entries." rows={unknownRows(admin.commissionLedger)} />
       </section>
     </div>
+  );
+}
+
+function ClaimCodeCard({
+  item,
+  onCopyClaimLink,
+  qr,
+}: {
+  item: PartnerClaimCode;
+  onCopyClaimLink: (url: string) => void;
+  qr: string;
+}) {
+  const statusClass = item.status === "claimed"
+    ? "bg-emerald text-emerald-foreground"
+    : item.status === "disabled"
+      ? "bg-destructive text-destructive-foreground"
+      : item.status === "claiming"
+        ? "bg-sky text-ink"
+        : "bg-card text-ink";
+
+  return (
+    <article className="panel offset-sm flex min-h-full flex-col overflow-hidden bg-card">
+      <div className="flex items-start justify-between gap-3 border-b-2 border-ink p-4">
+        <div className="min-w-0">
+          <p className="eyebrow text-emerald">Flyer QR</p>
+          <h3 className="mt-1 break-all font-mono text-2xl font-bold tracking-tight">{item.code}</h3>
+        </div>
+        <span className={`border-2 border-ink px-2 py-1 font-display text-[11px] font-bold uppercase tracking-[0.12em] ${statusClass}`}>
+          {item.status}
+        </span>
+      </div>
+
+      <div className="grid flex-1 gap-4 p-4 sm:grid-cols-[116px_1fr]">
+        <div className="grid h-[116px] w-[116px] place-items-center border-2 border-ink bg-white">
+          {qr ? (
+            <img alt={`Claim QR code ${item.code}`} className="h-full w-full object-contain" src={qr} />
+          ) : (
+            <span className="px-2 text-center font-display text-xs font-bold text-muted-foreground">QR loading</span>
+          )}
+        </div>
+
+        <dl className="grid content-start gap-2 text-sm">
+          <div>
+            <dt className="eyebrow text-muted-foreground">Created</dt>
+            <dd className="font-bold">{formatDate(item.createdAt)}</dd>
+          </div>
+          {item.claimedAt ? (
+            <div>
+              <dt className="eyebrow text-muted-foreground">Claimed</dt>
+              <dd className="font-bold">{formatDate(item.claimedAt)}</dd>
+            </div>
+          ) : null}
+          {item.claimedByUid ? (
+            <div>
+              <dt className="eyebrow text-muted-foreground">Account</dt>
+              <dd className="break-all font-mono text-xs font-bold">{item.claimedByUid}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </div>
+
+      <p className="border-t-2 border-ink bg-paper-deep p-3 font-mono text-xs break-all">{item.claimUrl}</p>
+
+      <div className="grid gap-2 border-t-2 border-ink p-4 sm:grid-cols-3">
+        <button className="bb-button offset-sm min-h-10 px-2 py-2 text-xs hover:-translate-x-[2px] hover:-translate-y-[2px]" onClick={() => onCopyClaimLink(item.claimUrl)} type="button">Copy</button>
+        <Link className="bb-button offset-sm min-h-10 px-2 py-2 text-xs hover:-translate-x-[2px] hover:-translate-y-[2px]" href={`/flyer/claim/${encodeURIComponent(item.code)}`} target="_blank">Flyer</Link>
+        <Link className="bb-button bb-button-primary offset-sm min-h-10 px-2 py-2 text-xs hover:-translate-x-[2px] hover:-translate-y-[2px]" href={item.claimUrl} target="_blank">Open</Link>
+      </div>
+    </article>
   );
 }
 
