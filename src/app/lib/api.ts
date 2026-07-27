@@ -109,6 +109,25 @@ export async function loadAdminDashboard(token: string) {
   }>("/v1/admin/nfc/summary", { token });
 }
 
+export async function getPartnerClaimCode(code: string) {
+  return request<{ claimCode: PartnerClaimCode }>(`/v1/partners/claim-codes/${encodeURIComponent(code)}`);
+}
+
+export async function claimPartnerClaimCode(code: string, token: string) {
+  return request<{ claimCode: PartnerClaimCode; partner: unknown }>(
+    `/v1/partners/me/claim-codes/${encodeURIComponent(code)}/claim`,
+    { method: "POST", token },
+  );
+}
+
+export async function createPartnerClaimCode(token: string, input: { code?: string; note?: string } = {}) {
+  return request<{ claimCode: PartnerClaimCode }>("/v1/admin/partners/claim-codes", {
+    body: JSON.stringify(input),
+    method: "POST",
+    token,
+  });
+}
+
 async function request<T>(path: string, init: RequestInit & { token?: string } = {}) {
   const response = await fetch(`${apiUrl}${path}`, {
     ...init,
@@ -128,6 +147,18 @@ type AccountSessionResponse = {
     token?: string;
   };
   token?: string;
+};
+
+export type PartnerClaimCode = {
+  claimUrl: string;
+  claimedAt: string;
+  claimedByUid: string;
+  code: string;
+  createdAt: string;
+  note: string;
+  referralUrl: string;
+  status: "unclaimed" | "claiming" | "claimed" | "disabled";
+  updatedAt: string;
 };
 
 function normalizeSession(response: AccountSessionResponse) {

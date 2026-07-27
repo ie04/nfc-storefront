@@ -3,7 +3,7 @@
 import QRCode from "qrcode";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
-import { loadAdminDashboard, loadPartnerPortal, login, loginCustomer, registerCustomer } from "@/app/lib/api";
+import { createPartnerClaimCode, loadAdminDashboard, loadPartnerPortal, login, loginCustomer, registerCustomer } from "@/app/lib/api";
 import type { PartnerPortalData } from "@/app/lib/contracts";
 import { formatDate, formatMoney } from "@/app/lib/format";
 
@@ -16,6 +16,9 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
   const [partner, setPartner] = useState<PartnerPortalData | null>(null);
   const [admin, setAdmin] = useState<Awaited<ReturnType<typeof loadAdminDashboard>> | null>(null);
   const [qr, setQr] = useState("");
+  const [claimQr, setClaimQr] = useState("");
+  const [claimUrl, setClaimUrl] = useState("");
+  const [claimCode, setClaimCode] = useState("");
   const title = mode === "partner" ? "Affiliate Portal" : "NFC Admin";
 
   useEffect(() => {
@@ -82,6 +85,21 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
     setMessage("QR code download started.");
   }
 
+  async function generateClaimCode() {
+    if (!token) return;
+    setError("");
+    setMessage("");
+    try {
+      const result = await createPartnerClaimCode(token);
+      setClaimCode(result.claimCode.code);
+      setClaimUrl(result.claimCode.claimUrl);
+      setClaimQr(await QRCode.toDataURL(result.claimCode.claimUrl, { errorCorrectionLevel: "H", margin: 1, width: 720 }));
+      setMessage(`Claim QR ${result.claimCode.code} is ready to print.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not create a claim QR.");
+    }
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
       <section className="bb-panel p-5">
@@ -144,6 +162,22 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
             <Metric label="Pending commissions" value={formatMoney(admin.metrics.pendingCommissionsCents)} />
           </div>
           <section className="bb-panel p-5">
+            <h2 className="text-xl font-black">Flyer Claim QR</h2>
+            <p className="mt-2 text-sm font-bold text-[var(--bb-muted)]">Print this QR on a flyer before the affiliate has an account. When they scan it, they can sign in or register and claim the code.</p>
+            <button className="bb-button bb-button-primary mt-4" onClick={() => void generateClaimCode()} type="button">Create claim QR</button>
+            {claimQr ? (
+              <div className="mt-4 grid gap-3 lg:grid-cols-[220px_1fr]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img alt={`Claim QR code ${claimCode}`} className="w-full border-2 border-black bg-white" src={claimQr} />
+                <div>
+                  <p className="font-black">Code: {claimCode}</p>
+                  <p className="mt-2 break-all border-2 border-black bg-white p-3 font-mono text-xs">{claimUrl}</p>
+                  <button className="bb-button mt-3" onClick={() => { const anchor = document.createElement("a"); anchor.download = `bayblaze-claim-${claimCode.toLowerCase()}-qr.png`; anchor.href = claimQr; anchor.click(); }} type="button">Download QR</button>
+                </div>
+              </div>
+            ) : null}
+          </section>
+          <section className="bb-panel p-5">
             <h2 className="text-xl font-black">Recent Orders</h2>
             <pre className="mt-4 max-h-96 overflow-auto border-2 border-black bg-white p-4 text-xs">{JSON.stringify(admin.orders, null, 2)}</pre>
           </section>
@@ -157,9 +191,9 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
   );
 }
 
-type AuthMode = "login" | "register";
+export type AuthMode = "login" | "register";
 
-type AuthFormState = {
+export type AuthFormState = {
   email: string;
   firstName: string;
   lastName: string;
@@ -173,7 +207,7 @@ const initialAuthForm: AuthFormState = {
   password: "",
 };
 
-function BayBlazeSignOnElement({
+export function BayBlazeSignOnElement({
   allowRegister,
   heading,
   onSubmit,

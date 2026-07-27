@@ -12,6 +12,11 @@
   processing, partner attribution, partner portal data, and admin dashboard data.
 - The public referral URL format is
   `https://nfc.bayblaze.net/?ref=<affiliate-code>`.
+- Offline flyer QR codes use claim URLs before an affiliate account exists:
+  `https://nfc.bayblaze.net/partners/claim?code=<affiliate-code>`. The claim
+  page must ask the scanner to sign in or register, then call `bayblaze-api` to
+  attach the code to that BayBlaze account. Once a code is claimed, the same
+  claim URL should send future scanners to `/?ref=<affiliate-code>`.
 - Persist partner attribution using the `bb_nfc_attribution` first-party cookie
   from `src/app/lib/attribution.ts`; validate codes through
   `POST /v1/nfc/attributions`.
