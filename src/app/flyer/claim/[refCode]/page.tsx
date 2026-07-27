@@ -18,6 +18,7 @@ export default async function ClaimFlyerPage({ params }: { params: Promise<{ ref
       qrUrl={qrUrl}
       refCode={refCode}
       scanLabel="Scan to Get Your Own Custom Tag!"
+      scanLabelVariant="loud"
     />
   );
 }

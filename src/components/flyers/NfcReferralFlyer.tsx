@@ -35,6 +35,7 @@ export type NfcReferralFlyerProps = {
   qrUrl?: string;
   refCode?: string;
   scanLabel?: string;
+  scanLabelVariant?: "caption" | "loud";
   siteUrl?: string;
 };
 
@@ -43,6 +44,7 @@ export function NfcReferralFlyer({
   qrUrl,
   refCode,
   scanLabel = "Scan to order yours",
+  scanLabelVariant = "caption",
   siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nfc.bayblaze.net",
 }: NfcReferralFlyerProps) {
   const shellRef = useRef<HTMLElement>(null);
@@ -79,7 +81,7 @@ export function NfcReferralFlyer({
             transformOrigin: "top left",
           }}
         >
-          <div className="flex h-full w-full flex-col px-[0.62in] py-[0.55in]">
+          <div className="flex h-full w-full flex-col px-[0.62in] pb-[0.26in] pt-[0.55in]">
             <header className="flex items-center justify-between">
               <div>
                 <div className="font-display text-[26px] font-bold tracking-[-0.02em]">
@@ -161,12 +163,12 @@ export function NfcReferralFlyer({
             </section>
 
             <section className="panel mt-4 flex flex-1 items-stretch overflow-hidden">
-              <div className="flex w-[3.35in] shrink-0 flex-col items-center justify-center gap-2.5 border-r-2 border-bb-ink bg-bb-white px-4 py-3">
+              <div className="flex w-[3.35in] shrink-0 flex-col items-center justify-center gap-2 border-r-2 border-bb-ink bg-bb-white px-3 py-2">
                 <div
                   data-qr-placeholder="true"
                   data-qr-value={qrValue || undefined}
                   id="qr-code-slot"
-                  style={{ width: "2.6in", aspectRatio: "1 / 1", background: "#ffffff" }}
+                  style={{ width: "2.32in", aspectRatio: "1 / 1", background: "#ffffff" }}
                 >
                   {qrValue ? (
                     <QRCodeSVG
@@ -182,7 +184,13 @@ export function NfcReferralFlyer({
                     />
                   ) : null}
                 </div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-bb-muted">
+                <p
+                  className={
+                    scanLabelVariant === "loud"
+                      ? "panel-sm max-w-[2.9in] bg-bb-emerald px-3 py-2.5 text-center font-display text-[18px] font-bold uppercase leading-[0.98] tracking-[0.04em] text-bb-white"
+                      : "text-[11px] font-medium uppercase tracking-[0.2em] text-bb-muted"
+                  }
+                >
                   {scanLabel}
                 </p>
               </div>
@@ -213,7 +221,7 @@ export function NfcReferralFlyer({
               </div>
             </section>
 
-            <footer className="mt-4 flex items-center justify-between text-[10.5px] font-medium uppercase tracking-[0.22em] text-bb-muted">
+            <footer className="mt-2 flex items-center justify-between text-[10.5px] font-medium uppercase tracking-[0.22em] text-bb-muted">
               <span>BayBlaze · Custom NFC Tags</span>
               <span>3D-printed in Tampa, FL</span>
             </footer>
