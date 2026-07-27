@@ -21,6 +21,8 @@
   app route `/auth/google/callback`. Configure Google Cloud and `bayblaze-api`
   with the exact redirect URI
   `https://nfc.bayblaze.net/auth/google/callback`.
+- Next route handlers should use server-side `BAYBLAZE_API_URL` to reach
+  `bayblaze-api`; browser code uses `NEXT_PUBLIC_BAYBLAZE_API_URL`.
 - Persist partner attribution using the `bb_nfc_attribution` first-party cookie
   from `src/app/lib/attribution.ts`; validate codes through
   `POST /v1/nfc/attributions`.

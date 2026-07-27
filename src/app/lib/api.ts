@@ -1,6 +1,9 @@
 import type { NfcAddress, NfcCustomer, NfcDesign, OrderCreateResponse, PartnerPortalData, QuoteResponse } from "./contracts";
 
-const apiUrl = process.env.NEXT_PUBLIC_BAYBLAZE_API_URL || "http://localhost:3040";
+const apiUrl =
+  process.env.BAYBLAZE_API_URL ||
+  process.env.NEXT_PUBLIC_BAYBLAZE_API_URL ||
+  "http://localhost:3040";
 
 export async function resolveAttribution(input: { code: string; existingToken?: string; sourcePath?: string }) {
   return request<{ token: string; code: string; discountPercent?: number; referralLink: string }>("/v1/nfc/attributions", {
@@ -158,16 +161,28 @@ export async function createPartnerClaimCode(token: string, input: { code?: stri
 }
 
 async function request<T>(path: string, init: RequestInit & { token?: string } = {}) {
-  const response = await fetch(`${apiUrl}${path}`, {
-    ...init,
-    headers: {
-      "content-type": "application/json",
-      ...(init.token ? { authorization: `Bearer ${init.token}` } : {}),
-      ...init.headers,
-    },
-  });
+  const url = `${apiUrl}${path}`;
+  const response = await fetch(url, {
+      ...init,
+      headers: {
+        "content-type": "application/json",
+        ...(init.token ? { authorization: `Bearer ${init.token}` } : {}),
+        ...init.headers,
+      },
+    }).catch(() => {
+      const host = safeApiHost(apiUrl);
+      throw new Error(`Could not reach BayBlaze API at ${host}. Check BAYBLAZE_API_URL/NEXT_PUBLIC_BAYBLAZE_API_URL.`);
+    });
   if (!response.ok) throw new Error(await readMessage(response));
   return response.json() as Promise<T>;
+}
+
+function safeApiHost(value: string) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "the configured API URL";
+  }
 }
 
 type AccountSessionResponse = {

@@ -20,6 +20,10 @@ Required public environment:
 - `NEXT_PUBLIC_BAYBLAZE_API_URL`
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 
+Required server environment:
+
+- `BAYBLAZE_API_URL`
+
 Do not commit Stripe secret keys, Firebase credentials, Maps keys, private
 delivery-origin details, uploaded customer artwork, or production tokens.
 
