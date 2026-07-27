@@ -57,10 +57,32 @@ export async function uploadDesignAsset(file: File) {
 }
 
 export async function login(email: string, password: string) {
-  return request<{ token: string; account: unknown }>("/v1/auth/login", {
+  const response = await request<AccountSessionResponse>("/v1/auth/login", {
     body: JSON.stringify({ email, password }),
     method: "POST",
   });
+  return normalizeSession(response);
+}
+
+export async function loginCustomer(email: string, password: string) {
+  const response = await request<AccountSessionResponse>("/v1/customer/auth/login", {
+    body: JSON.stringify({ email, password }),
+    method: "POST",
+  });
+  return normalizeSession(response);
+}
+
+export async function registerCustomer(input: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  password: string;
+}) {
+  const response = await request<AccountSessionResponse>("/v1/customer/auth/accounts", {
+    body: JSON.stringify(input),
+    method: "POST",
+  });
+  return normalizeSession(response);
 }
 
 export async function loadPartnerPortal(token: string): Promise<PartnerPortalData> {
@@ -98,6 +120,20 @@ async function request<T>(path: string, init: RequestInit & { token?: string } =
   });
   if (!response.ok) throw new Error(await readMessage(response));
   return response.json() as Promise<T>;
+}
+
+type AccountSessionResponse = {
+  account: unknown;
+  session?: {
+    token?: string;
+  };
+  token?: string;
+};
+
+function normalizeSession(response: AccountSessionResponse) {
+  const token = response.session?.token || response.token || "";
+  if (!token) throw new Error("BayBlaze did not return an account session.");
+  return { account: response.account, token };
 }
 
 async function readMessage(response: Response) {

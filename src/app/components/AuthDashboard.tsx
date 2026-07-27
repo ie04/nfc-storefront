@@ -1,17 +1,15 @@
 "use client";
 
 import QRCode from "qrcode";
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
-import { loadAdminDashboard, loadPartnerPortal, login } from "@/app/lib/api";
+import { loadAdminDashboard, loadPartnerPortal, login, loginCustomer, registerCustomer } from "@/app/lib/api";
 import type { PartnerPortalData } from "@/app/lib/contracts";
 import { formatDate, formatMoney } from "@/app/lib/format";
 
 type Mode = "partner" | "admin";
 
 export default function AuthDashboard({ mode }: { mode: Mode }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [token, setToken] = useState(() => typeof window === "undefined" ? "" : window.localStorage.getItem("bb_account_token") || "");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -49,14 +47,23 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
     return formatDate(date.toISOString());
   }, [partner?.payouts]);
 
-  async function submitLogin() {
+  async function submitAuth(input: AuthFormState & { authMode: AuthMode }) {
     setError("");
     try {
-      const result = await login(email, password);
+      const result = input.authMode === "register"
+        ? await registerCustomer({
+            email: input.email,
+            firstName: input.firstName,
+            lastName: input.lastName,
+            password: input.password,
+          })
+        : mode === "partner"
+          ? await loginCustomer(input.email, input.password)
+          : await login(input.email, input.password);
       window.localStorage.setItem("bb_account_token", result.token);
       setToken(result.token);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not sign in.");
+      throw caught instanceof Error ? caught : new Error("Could not sign in.");
     }
   }
 
@@ -83,11 +90,12 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
         {error ? <p className="mt-4 border-2 border-[var(--bb-red)] p-3 font-black text-[var(--bb-red)]">{error}</p> : null}
         {message ? <p className="mt-4 border-2 border-black bg-[var(--bb-lime)] p-3 font-black">{message}</p> : null}
         {!token ? (
-          <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-            <input aria-label="Email" className="bb-input" onChange={(event) => setEmail(event.target.value)} placeholder="Email" value={email} />
-            <input aria-label="Password" className="bb-input" onChange={(event) => setPassword(event.target.value)} placeholder="Password" type="password" value={password} />
-            <button className="bb-button bb-button-primary" onClick={() => void submitLogin()} type="button">Sign in</button>
-          </div>
+          <BayBlazeSignOnElement
+            allowRegister={mode === "partner"}
+            heading={mode === "partner" ? "Sign In" : "Admin Sign In"}
+            onSubmit={submitAuth}
+            submitError={error}
+          />
         ) : (
           <button className="bb-button mt-6" onClick={() => { window.localStorage.removeItem("bb_account_token"); setToken(""); setPartner(null); setAdmin(null); }} type="button">Sign out</button>
         )}
@@ -146,6 +154,179 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
         </div>
       ) : null}
     </main>
+  );
+}
+
+type AuthMode = "login" | "register";
+
+type AuthFormState = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  password: string;
+};
+
+const initialAuthForm: AuthFormState = {
+  email: "",
+  firstName: "",
+  lastName: "",
+  password: "",
+};
+
+function BayBlazeSignOnElement({
+  allowRegister,
+  heading,
+  onSubmit,
+  submitError,
+}: {
+  allowRegister: boolean;
+  heading: string;
+  onSubmit: (input: AuthFormState & { authMode: AuthMode }) => Promise<void>;
+  submitError: string;
+}) {
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [form, setForm] = useState<AuthFormState>(initialAuthForm);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localError, setLocalError] = useState("");
+
+  function updateField(field: keyof AuthFormState, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLocalError("");
+    setIsSubmitting(true);
+    try {
+      await onSubmit({ ...form, authMode });
+    } catch (caught) {
+      setLocalError(caught instanceof Error ? caught.message : "We could not complete that request. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section
+      aria-labelledby="bayblaze-auth-heading"
+      className="mx-auto mt-6 w-full max-w-[520px] border-2 border-black bg-white p-5 shadow-[6px_6px_0_#000] sm:p-8"
+    >
+      <h2
+        className="mb-6 text-center text-4xl font-black uppercase leading-none text-black sm:text-5xl"
+        id="bayblaze-auth-heading"
+      >
+        {heading}
+      </h2>
+
+      {allowRegister ? (
+        <div className="mb-6 grid grid-cols-2 border-2 border-black bg-white">
+          <button
+            aria-pressed={authMode === "login"}
+            className={`h-12 border-r-2 border-black text-[14px] font-extrabold uppercase tracking-widest transition-colors ${
+              authMode === "login" ? "bg-black text-white" : "bg-white text-black hover:bg-[var(--bb-lime)]"
+            }`}
+            onClick={() => {
+              setAuthMode("login");
+              setLocalError("");
+            }}
+            type="button"
+          >
+            Login
+          </button>
+          <button
+            aria-pressed={authMode === "register"}
+            className={`h-12 text-[14px] font-extrabold uppercase tracking-widest transition-colors ${
+              authMode === "register" ? "bg-black text-white" : "bg-white text-black hover:bg-[var(--bb-lime)]"
+            }`}
+            onClick={() => {
+              setAuthMode("register");
+              setLocalError("");
+            }}
+            type="button"
+          >
+            Register
+          </button>
+        </div>
+      ) : null}
+
+      <button
+        className="mb-5 flex h-12 w-full items-center justify-center gap-3 border-2 border-black bg-white px-4 text-center text-[14px] font-extrabold uppercase tracking-wider text-black transition-colors hover:bg-black hover:text-white"
+        onClick={() => setLocalError("Google sign-on for the NFC domain needs its OAuth redirect URI configured before it can be enabled.")}
+        type="button"
+      >
+        <span aria-hidden="true" className="grid size-5 place-items-center border-2 border-black bg-white text-[12px] font-black leading-none text-black">G</span>
+        Continue with Google
+      </button>
+
+      <div className="mb-5 flex items-center gap-3 text-[12px] font-extrabold uppercase tracking-[0.16em] text-[var(--bb-muted)]">
+        <span className="h-0.5 flex-1 bg-black" />
+        <span>Email</span>
+        <span className="h-0.5 flex-1 bg-black" />
+      </div>
+
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        {authMode === "register" ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <AuthInput autoComplete="given-name" label="First name" onChange={(value) => updateField("firstName", value)} value={form.firstName} />
+            <AuthInput autoComplete="family-name" label="Last name" onChange={(value) => updateField("lastName", value)} value={form.lastName} />
+          </div>
+        ) : null}
+        <AuthInput autoComplete="email" label="Email" onChange={(value) => updateField("email", value)} type="email" value={form.email} />
+        <AuthInput
+          autoComplete={authMode === "login" ? "current-password" : "new-password"}
+          label="Password"
+          minLength={authMode === "login" ? 6 : 12}
+          onChange={(value) => updateField("password", value)}
+          type="password"
+          value={form.password}
+        />
+
+        <p aria-live="polite" className="min-h-6 border-2 border-transparent text-[14px] font-bold text-[var(--bb-red)]">
+          {localError || submitError}
+        </p>
+
+        <button
+          className="bb-button bb-button-primary flex h-[52px] w-full"
+          disabled={isSubmitting}
+          type="submit"
+        >
+          {isSubmitting
+            ? authMode === "login" ? "Signing in..." : "Creating account..."
+            : authMode === "login" ? "Sign in" : "Create account"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function AuthInput({
+  autoComplete,
+  label,
+  minLength,
+  onChange,
+  type = "text",
+  value,
+}: {
+  autoComplete?: string;
+  label: string;
+  minLength?: number;
+  onChange: (value: string) => void;
+  type?: string;
+  value: string;
+}) {
+  return (
+    <label className="block text-[13px] font-extrabold uppercase tracking-widest text-black">
+      {label}
+      <input
+        autoComplete={autoComplete}
+        className="bb-input mt-2 h-12 text-[16px] font-medium normal-case tracking-normal"
+        minLength={minLength}
+        onChange={(event) => onChange(event.target.value)}
+        required
+        type={type}
+        value={value}
+      />
+    </label>
   );
 }
 
