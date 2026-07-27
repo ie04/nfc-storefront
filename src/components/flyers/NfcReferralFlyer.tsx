@@ -31,18 +31,24 @@ const TAGS = [
 ];
 
 export type NfcReferralFlyerProps = {
+  qrTitle?: string;
+  qrUrl?: string;
   refCode?: string;
+  scanLabel?: string;
   siteUrl?: string;
 };
 
 export function NfcReferralFlyer({
+  qrTitle,
+  qrUrl,
   refCode,
+  scanLabel = "Scan to order yours",
   siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nfc.bayblaze.net",
 }: NfcReferralFlyerProps) {
   const shellRef = useRef<HTMLElement>(null);
   const [scale, setScale] = useState(1);
   const baseUrl = siteUrl.replace(/\/+$/, "");
-  const qrValue = refCode ? `${baseUrl}/r/${encodeURIComponent(refCode)}` : "";
+  const qrValue = qrUrl || (refCode ? `${baseUrl}/r/${encodeURIComponent(refCode)}` : "");
 
   useEffect(() => {
     const fit = () => {
@@ -171,13 +177,13 @@ export function NfcReferralFlyer({
                       role="img"
                       size={250}
                       style={{ display: "block", height: "100%", width: "100%" }}
-                      title={`BayBlaze NFC referral QR for ${refCode}`}
+                      title={qrTitle || `BayBlaze NFC referral QR for ${refCode}`}
                       value={qrValue}
                     />
                   ) : null}
                 </div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-bb-muted">
-                  Scan to order yours
+                  {scanLabel}
                 </p>
               </div>
               <div className="flex min-w-0 flex-1 flex-col justify-between bg-bb-sky px-6 py-5">

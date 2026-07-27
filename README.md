@@ -18,6 +18,8 @@ black borders, offset shadows, and rendered NFC tag product art.
 - The QR code points to `https://nfc.bayblaze.net/r/[refCode]`.
 - `/r/[refCode]` sets `bayblaze_ref` and redirects to `/?ref=[refCode]`, where
   the existing NFC attribution flow validates and persists checkout attribution.
+- `/flyer/claim/[refCode]` renders the same print-ready flyer style with an
+  unclaimed affiliate QR that points to `/partners/claim?code=[refCode]`.
 
 ## Local Development
 

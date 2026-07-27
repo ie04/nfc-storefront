@@ -22,6 +22,7 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
   const [claimQr, setClaimQr] = useState("");
   const [claimUrl, setClaimUrl] = useState("");
   const [claimCode, setClaimCode] = useState("");
+  const [claimBusy, setClaimBusy] = useState(false);
   const title = mode === "partner" ? "Affiliate Portal" : "NFC Admin";
   const subtitle = mode === "partner"
     ? "Track your referral QR, attributed orders, and payout history."
@@ -91,18 +92,26 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
     setMessage("QR code download started.");
   }
 
-  async function generateClaimCode() {
+  async function generateClaimCode({ openFlyer = false }: { openFlyer?: boolean } = {}) {
     if (!token) return;
     setError("");
     setMessage("");
+    setClaimBusy(true);
     try {
       const result = await createPartnerClaimCode(token);
       setClaimCode(result.claimCode.code);
       setClaimUrl(result.claimCode.claimUrl);
       setClaimQr(await QRCode.toDataURL(result.claimCode.claimUrl, { errorCorrectionLevel: "H", margin: 1, width: 720 }));
-      setMessage(`Claim QR ${result.claimCode.code} is ready to print.`);
+      if (openFlyer) {
+        window.open(`/flyer/claim/${encodeURIComponent(result.claimCode.code)}`, "_blank", "noopener,noreferrer");
+        setMessage(`Claim flyer ${result.claimCode.code} opened in a new tab.`);
+      } else {
+        setMessage(`Claim QR ${result.claimCode.code} is ready to print.`);
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not create a claim QR.");
+    } finally {
+      setClaimBusy(false);
     }
   }
 
@@ -179,9 +188,11 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
           <AdminDashboard
             admin={admin}
             claimCode={claimCode}
+            claimBusy={claimBusy}
             claimQr={claimQr}
             claimUrl={claimUrl}
             generateClaimCode={() => void generateClaimCode()}
+            generateClaimFlyer={() => void generateClaimCode({ openFlyer: true })}
           />
         ) : null}
       </main>
@@ -259,16 +270,20 @@ function PartnerDashboard({
 
 function AdminDashboard({
   admin,
+  claimBusy,
   claimCode,
   claimQr,
   claimUrl,
   generateClaimCode,
+  generateClaimFlyer,
 }: {
   admin: Awaited<ReturnType<typeof loadAdminDashboard>>;
+  claimBusy: boolean;
   claimCode: string;
   claimQr: string;
   claimUrl: string;
   generateClaimCode: () => void;
+  generateClaimFlyer: () => void;
 }) {
   return (
     <div className="grid gap-6">
@@ -286,7 +301,24 @@ function AdminDashboard({
             <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
               When the flyer QR is scanned, the person can sign in or register and claim the referral code for future sales.
             </p>
-            <button className="bb-button bb-button-primary offset-sm mt-5 hover:-translate-x-[2px] hover:-translate-y-[2px]" onClick={generateClaimCode} type="button">Create claim QR</button>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                className="bb-button bb-button-primary offset-sm hover:-translate-x-[2px] hover:-translate-y-[2px]"
+                disabled={claimBusy}
+                onClick={generateClaimCode}
+                type="button"
+              >
+                {claimBusy ? "Creating..." : "Create claim QR"}
+              </button>
+              <button
+                className="bb-button offset-sm bg-card hover:-translate-x-[2px] hover:-translate-y-[2px]"
+                disabled={claimBusy}
+                onClick={generateClaimFlyer}
+                type="button"
+              >
+                {claimBusy ? "Creating..." : "Create claim flyer"}
+              </button>
+            </div>
           </div>
           {claimQr ? (
             <div>
