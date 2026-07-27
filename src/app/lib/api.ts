@@ -85,6 +85,35 @@ export async function registerCustomer(input: {
   return normalizeSession(response);
 }
 
+export async function startGoogleOAuth(input: {
+  callbackUrl: string;
+  redirectTo: string;
+}) {
+  return request<{ authorizationUrl: string; expiresInSeconds: number }>("/v1/auth/google/start", {
+    body: JSON.stringify({
+      callbackUrl: input.callbackUrl,
+      commerce: "storefront",
+      redirectTo: input.redirectTo,
+    }),
+    method: "POST",
+  });
+}
+
+export async function completeGoogleOAuth(input: {
+  callbackUrl: string;
+  code: string;
+  state: string;
+}) {
+  const response = await request<AccountSessionResponse & { redirectTo?: string }>("/v1/auth/google/callback", {
+    body: JSON.stringify(input),
+    method: "POST",
+  });
+  return {
+    ...normalizeSession(response),
+    redirectTo: response.redirectTo || "/partners",
+  };
+}
+
 export async function loadPartnerPortal(token: string): Promise<PartnerPortalData> {
   const [overview, referrals, payouts, account] = await Promise.all([
     request<PartnerPortalData>("/v1/partners/me/overview", { token }),

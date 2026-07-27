@@ -1,6 +1,7 @@
 "use client";
 
 import QRCode from "qrcode";
+import { usePathname, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import { createPartnerClaimCode, loadAdminDashboard, loadPartnerPortal, login, loginCustomer, registerCustomer } from "@/app/lib/api";
@@ -222,6 +223,11 @@ export function BayBlazeSignOnElement({
   const [form, setForm] = useState<AuthFormState>(initialAuthForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState("");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  const redirectTo = `${pathname}${query ? `?${query}` : ""}`;
+  const googleHref = `/api/auth/oauth/google/start?redirect=${encodeURIComponent(redirectTo)}`;
 
   function updateField(field: keyof AuthFormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -283,14 +289,13 @@ export function BayBlazeSignOnElement({
         </div>
       ) : null}
 
-      <button
+      <a
         className="mb-5 flex h-12 w-full items-center justify-center gap-3 border-2 border-black bg-white px-4 text-center text-[14px] font-extrabold uppercase tracking-wider text-black transition-colors hover:bg-black hover:text-white"
-        onClick={() => setLocalError("Google sign-on for the NFC domain needs its OAuth redirect URI configured before it can be enabled.")}
-        type="button"
+        href={googleHref}
       >
         <span aria-hidden="true" className="grid size-5 place-items-center border-2 border-black bg-white text-[12px] font-black leading-none text-black">G</span>
         Continue with Google
-      </button>
+      </a>
 
       <div className="mb-5 flex items-center gap-3 text-[12px] font-extrabold uppercase tracking-[0.16em] text-[var(--bb-muted)]">
         <span className="h-0.5 flex-1 bg-black" />

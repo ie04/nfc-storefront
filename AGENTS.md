@@ -17,6 +17,10 @@
   page must ask the scanner to sign in or register, then call `bayblaze-api` to
   attach the code to that BayBlaze account. Once a code is claimed, the same
   claim URL should send future scanners to `/?ref=<affiliate-code>`.
+- Google sign-in starts at `/api/auth/oauth/google/start` and completes on the
+  app route `/auth/google/callback`. Configure Google Cloud and `bayblaze-api`
+  with the exact redirect URI
+  `https://nfc.bayblaze.net/auth/google/callback`.
 - Persist partner attribution using the `bb_nfc_attribution` first-party cookie
   from `src/app/lib/attribution.ts`; validate codes through
   `POST /v1/nfc/attributions`.
