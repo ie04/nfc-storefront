@@ -17,7 +17,7 @@ export default async function ClaimFlyerPage({ params }: { params: Promise<{ ref
       qrTitle={`BayBlaze NFC affiliate claim QR for ${refCode}`}
       qrUrl={qrUrl}
       refCode={refCode}
-      scanLabel="Scan to claim this QR"
+      scanLabel="Scan to Get Your Own Custom Tag!"
     />
   );
 }
