@@ -56,52 +56,78 @@ export default function ClaimCodePage({ code }: { code: string }) {
   }
 
   return (
-    <main className="min-h-screen bg-background px-5 py-10 sm:py-14">
-      <section className="panel offset mx-auto w-full max-w-5xl overflow-hidden">
-        <div className="grid gap-8 p-8 sm:p-12 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div>
+    <main className="min-h-screen bg-background">
+      <section className="grid min-h-screen lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="relative flex min-h-[42vh] flex-col justify-between overflow-hidden border-b-2 border-ink bg-sky px-5 py-8 sm:px-10 sm:py-12 lg:min-h-screen lg:border-b-0 lg:border-r-2">
+          <div className="relative z-10">
             <p className="eyebrow text-emerald">BayBlaze NFC Affiliates</p>
-            <h1 className="mt-5 text-5xl leading-[0.95] sm:text-6xl">Claim your flyer QR.</h1>
-            <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
+            <h1 className="mt-5 max-w-xl text-[44px] leading-[0.95] sm:text-6xl lg:text-7xl">
+              Claim your flyer <span className="block sm:inline">QR.</span>
+            </h1>
+            <p className="mt-5 max-w-xl text-lg font-medium leading-relaxed text-muted-foreground sm:text-xl">
               Sign in or create your BayBlaze account, and this printed QR code becomes your affiliate link.
             </p>
           </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            alt="3D printed green NFC keychain tag with a custom star design"
-            className="hidden h-40 w-40 object-contain drop-shadow-[8px_10px_0_rgba(0,0,0,0.18)] lg:block"
-            height={816}
-            src="/assets/tag-custom.png"
-            width={816}
-          />
+
+          <div className="relative z-10 mt-8 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end lg:block">
+            {claimCode ? (
+              <div className="panel offset-sm w-full max-w-md bg-card p-5">
+                <p className="eyebrow">Flyer code</p>
+                <p className="mt-2 font-mono text-3xl font-bold tracking-tight">{claimCode.code}</p>
+              </div>
+            ) : (
+              <div className="panel offset-sm w-full max-w-md bg-card p-5">
+                <p className="eyebrow">Flyer code</p>
+                <p className="mt-2 font-display text-xl font-bold">Checking link...</p>
+              </div>
+            )}
+
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt="3D printed green NFC keychain tag with a custom star design"
+              className="h-32 w-32 justify-self-center object-contain drop-shadow-[8px_10px_0_rgba(0,0,0,0.18)] sm:h-44 sm:w-44 sm:justify-self-end lg:mt-10 lg:h-56 lg:w-56"
+              height={816}
+              src="/assets/tag-custom.png"
+              width={816}
+            />
+          </div>
         </div>
 
-        {claimCode ? (
-          <div className="border-t-2 border-ink bg-sky p-6 sm:px-12">
-            <p className="eyebrow">Flyer code</p>
-            <p className="mt-1 font-mono text-2xl font-bold">{claimCode.code}</p>
+        <div className="flex min-h-[58vh] items-center justify-center px-5 py-8 sm:px-10 sm:py-12 lg:min-h-screen">
+          <div className="w-full max-w-[760px]">
+            {message ? <p className="panel offset-sm mb-5 bg-sky p-4 font-display text-sm font-bold">{message}</p> : null}
+            {error && (!claimCode || claimCode.status !== "unclaimed") ? (
+              <p className="panel offset-sm mb-5 break-all border-destructive bg-card p-4 font-display text-sm font-bold text-destructive">{error}</p>
+            ) : null}
+
+            {claimed && claimCode ? (
+              <div className="panel offset bg-card p-6 sm:p-8">
+                <p className="eyebrow text-emerald">Ready</p>
+                <h2 className="mt-3 text-4xl leading-none sm:text-5xl">Your QR is claimed.</h2>
+                <p className="mt-4 max-w-xl text-lg font-medium text-muted-foreground">
+                  Anyone who scans this flyer now goes through your affiliate referral.
+                </p>
+                <Link className="bb-button bb-button-primary offset-sm mt-6 w-fit hover:-translate-x-[2px] hover:-translate-y-[2px]" href={`/?ref=${encodeURIComponent(claimCode.code)}`}>Open my referral page</Link>
+              </div>
+            ) : token && claimCode?.status === "unclaimed" ? (
+              <div className="panel offset bg-card p-6 sm:p-8">
+                <p className="eyebrow text-emerald">Almost done</p>
+                <h2 className="mt-3 text-4xl leading-none sm:text-5xl">Claim this QR code.</h2>
+                <p className="mt-4 max-w-xl text-lg font-medium text-muted-foreground">
+                  Attach this flyer code to your BayBlaze account.
+                </p>
+                <button className="bb-button bb-button-primary offset-sm mt-6 hover:-translate-x-[2px] hover:-translate-y-[2px]" onClick={() => void claimWithToken()} type="button">Claim this QR code</button>
+              </div>
+            ) : claimCode?.status === "unclaimed" ? (
+              <BayBlazeSignOnElement
+                allowRegister
+                heading="Sign in"
+                onSubmit={submitAuth}
+                submitError={error}
+                width="wide"
+              />
+            ) : null}
           </div>
-        ) : null}
-
-        <div className="p-8 sm:p-12">
-          {message ? <p className="panel offset-sm mb-4 bg-sky p-4 font-display text-sm font-bold">{message}</p> : null}
-          {error ? <p className="panel offset-sm mb-4 border-destructive bg-card p-4 font-display text-sm font-bold text-destructive">{error}</p> : null}
-
-          {claimed && claimCode ? (
-            <div className="grid gap-4">
-              <p className="font-display text-lg font-bold">Your QR is ready. Anyone who scans this flyer now goes through your affiliate referral.</p>
-              <Link className="bb-button bb-button-primary offset-sm w-fit hover:-translate-x-[2px] hover:-translate-y-[2px]" href={`/?ref=${encodeURIComponent(claimCode.code)}`}>Open my referral page</Link>
-            </div>
-          ) : token && claimCode?.status === "unclaimed" ? (
-            <button className="bb-button bb-button-primary offset-sm hover:-translate-x-[2px] hover:-translate-y-[2px]" onClick={() => void claimWithToken()} type="button">Claim this QR code</button>
-          ) : claimCode?.status === "unclaimed" ? (
-            <BayBlazeSignOnElement
-              allowRegister
-              heading="Sign in"
-              onSubmit={submitAuth}
-              submitError={error}
-            />
-          ) : null}
         </div>
       </section>
     </main>

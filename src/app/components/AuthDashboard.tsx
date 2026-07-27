@@ -369,11 +369,13 @@ export function BayBlazeSignOnElement({
   heading,
   onSubmit,
   submitError,
+  width = "default",
 }: {
   allowRegister: boolean;
   heading: string;
   onSubmit: (input: AuthFormState & { authMode: AuthMode }) => Promise<void>;
   submitError: string;
+  width?: "default" | "wide";
 }) {
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [form, setForm] = useState<AuthFormState>(initialAuthForm);
@@ -403,7 +405,12 @@ export function BayBlazeSignOnElement({
   }
 
   return (
-    <section aria-labelledby="bayblaze-auth-heading" className="panel offset mx-auto w-full max-w-[560px] p-6 sm:p-8">
+    <section
+      aria-labelledby="bayblaze-auth-heading"
+      className={`panel offset mx-auto w-full p-6 sm:p-8 ${
+        width === "wide" ? "max-w-[720px]" : "max-w-[560px]"
+      }`}
+    >
       <span className="eyebrow text-emerald">BayBlaze account</span>
       <h2 className="mt-3 text-center text-4xl leading-none sm:text-5xl" id="bayblaze-auth-heading">{heading}</h2>
 
@@ -465,7 +472,7 @@ export function BayBlazeSignOnElement({
           value={form.password}
         />
 
-        <p aria-live="polite" className="min-h-6 text-sm font-bold text-destructive">{localError || submitError}</p>
+        <p aria-live="polite" className="min-h-6 break-all text-sm font-bold text-destructive">{localError || submitError}</p>
 
         <button className="bb-button bb-button-primary offset-sm flex h-[52px] w-full hover:-translate-x-[2px] hover:-translate-y-[2px]" disabled={isSubmitting} type="submit">
           {isSubmitting
