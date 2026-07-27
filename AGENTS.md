@@ -31,6 +31,9 @@
   `https://nfc.bayblaze.net/auth/google/callback`.
 - Next route handlers should use server-side `BAYBLAZE_API_URL` to reach
   `bayblaze-api`; browser code uses `NEXT_PUBLIC_BAYBLAZE_API_URL`.
+- Production falls back to `https://api.bayblaze.net` if those variables are
+  missing, while local development falls back to `http://localhost:3040`. Vercel
+  env var changes require a redeploy before serverless functions see them.
 - Persist partner attribution using the `bb_nfc_attribution` first-party cookie
   from `src/app/lib/attribution.ts`; validate codes through
   `POST /v1/nfc/attributions`.

@@ -1,9 +1,15 @@
 import type { NfcAddress, NfcCustomer, NfcDesign, OrderCreateResponse, PartnerPortalData, QuoteResponse } from "./contracts";
 
-const apiUrl =
-  process.env.BAYBLAZE_API_URL ||
-  process.env.NEXT_PUBLIC_BAYBLAZE_API_URL ||
-  "http://localhost:3040";
+const productionApiUrl = "https://api.bayblaze.net";
+const localApiUrl = "http://localhost:3040";
+
+const apiUrl = resolveApiUrl();
+
+function resolveApiUrl() {
+  const configured = process.env.BAYBLAZE_API_URL || process.env.NEXT_PUBLIC_BAYBLAZE_API_URL;
+  const fallback = process.env.NODE_ENV === "production" ? productionApiUrl : localApiUrl;
+  return (configured || fallback).replace(/\/+$/, "");
+}
 
 export async function resolveAttribution(input: { code: string; existingToken?: string; sourcePath?: string }) {
   return request<{ token: string; code: string; discountPercent?: number; referralLink: string }>("/v1/nfc/attributions", {
