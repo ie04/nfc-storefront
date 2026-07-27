@@ -3,8 +3,11 @@
 `nfc-storefront` is the customer NFC tag ordering app intended for
 `nfc.bayblaze.net`.
 
-- Match the BayBlaze sharp storefront UI language: Jost, strong black borders,
-  rectangular controls, high contrast, and mobile-first checkout surfaces.
+- Match the Lovable-derived BayBlaze NFC revamp visual system: Space Grotesk
+  display type, DM Sans body type, paper background, heavy black borders,
+  rectangular controls, emerald accents, pale sky callouts, offset shadows, and
+  the rendered NFC tag assets in `public/assets`. The `/`, `/partners`,
+  `/dashboard`, and `/partners/claim` routes should feel visually consistent.
 - Keep this repository frontend-only. Do not add Firebase Admin, Stripe secret
   key usage, Maps/IsoChronos secrets, private delivery-origin data, commission
   calculations, payout writes, or authoritative price/tax logic here.

@@ -7,6 +7,10 @@ tax/fees, local-delivery eligibility, affiliate attribution, private uploads,
 PaymentIntent creation, Stripe webhooks, commission ledger writes, and admin
 authorization live in `bayblaze-api`.
 
+The frontend visual system is based on the `ie04/bayblaze-nfc-revamp` design:
+Space Grotesk headings, DM Sans body text, paper/ink/emerald/sky colors, hard
+black borders, offset shadows, and rendered NFC tag product art.
+
 ## Local Development
 
 ```bash

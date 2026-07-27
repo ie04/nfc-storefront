@@ -1,6 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import QRCode from "qrcode";
+import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
@@ -21,6 +23,9 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
   const [claimUrl, setClaimUrl] = useState("");
   const [claimCode, setClaimCode] = useState("");
   const title = mode === "partner" ? "Affiliate Portal" : "NFC Admin";
+  const subtitle = mode === "partner"
+    ? "Track your referral QR, attributed orders, and payout history."
+    : "Review NFC orders, commissions, payouts, and printable claim QR codes.";
 
   useEffect(() => {
     if (!token) return;
@@ -101,94 +106,212 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
     }
   }
 
+  function signOut() {
+    window.localStorage.removeItem("bb_account_token");
+    setToken("");
+    setPartner(null);
+    setAdmin(null);
+    setMessage("");
+    setError("");
+  }
+
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
-      <section className="bb-panel p-5">
-        <p className="font-black uppercase tracking-[0.18em] text-[var(--bb-green)]">BayBlaze NFC</p>
-        <h1 className="mt-2 text-4xl font-black">{title}</h1>
-        {error ? <p className="mt-4 border-2 border-[var(--bb-red)] p-3 font-black text-[var(--bb-red)]">{error}</p> : null}
-        {message ? <p className="mt-4 border-2 border-black bg-[var(--bb-lime)] p-3 font-black">{message}</p> : null}
+    <div className="min-h-screen bg-background">
+      <header className="border-b-2 border-ink">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <Link className="font-display text-sm font-bold tracking-[0.18em] uppercase" href="/">
+            BayBlaze<span className="text-emerald"> NFC</span>
+          </Link>
+          <span className="text-xs text-muted-foreground">Programmed by hand · Tampa Bay · Ships nationwide</span>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl space-y-6 px-5 py-10 sm:py-14">
+        <section className="panel offset overflow-hidden">
+          <div className="grid items-center gap-8 p-8 sm:p-12 lg:grid-cols-[1.2fr_auto]">
+            <div>
+              <span className="eyebrow text-emerald">BayBlaze NFC</span>
+              <h1 className="mt-5 text-5xl leading-[0.95] sm:text-6xl">{title}</h1>
+              <p className="mt-5 max-w-2xl text-lg text-muted-foreground">{subtitle}</p>
+            </div>
+            <div className="hidden justify-end lg:flex">
+              <img
+                alt="3D printed green NFC keychain tag with a custom star design"
+                className="h-44 w-44 object-contain drop-shadow-[8px_10px_0_rgba(0,0,0,0.18)]"
+                height={816}
+                src="/assets/tag-custom.png"
+                width={816}
+              />
+            </div>
+          </div>
+          <div className="border-t-2 border-ink bg-sky px-8 py-5 sm:px-12">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <p className="font-display text-sm font-bold">Same BayBlaze account sign-on. Same NFC visual system.</p>
+              {token ? <button className="bb-button offset-sm bg-card hover:-translate-x-[2px] hover:-translate-y-[2px]" onClick={signOut} type="button">Sign out</button> : null}
+            </div>
+          </div>
+        </section>
+
+        {error ? <p className="panel offset-sm border-destructive bg-card p-4 font-display text-sm font-bold text-destructive">{error}</p> : null}
+        {message ? <p className="panel offset-sm bg-sky p-4 font-display text-sm font-bold">{message}</p> : null}
+
         {!token ? (
           <BayBlazeSignOnElement
             allowRegister={mode === "partner"}
-            heading={mode === "partner" ? "Sign In" : "Admin Sign In"}
+            heading={mode === "partner" ? "Sign in" : "Admin sign in"}
             onSubmit={submitAuth}
             submitError={error}
           />
-        ) : (
-          <button className="bb-button mt-6" onClick={() => { window.localStorage.removeItem("bb_account_token"); setToken(""); setPartner(null); setAdmin(null); }} type="button">Sign out</button>
-        )}
+        ) : null}
+
+        {mode === "partner" && partner ? (
+          <PartnerDashboard
+            downloadQr={downloadQr}
+            nextPayoutDate={nextPayoutDate}
+            onCopyReferral={() => void copyReferral()}
+            partner={partner}
+            qr={qr}
+            referralLink={referralLink}
+          />
+        ) : null}
+
+        {mode === "admin" && admin ? (
+          <AdminDashboard
+            admin={admin}
+            claimCode={claimCode}
+            claimQr={claimQr}
+            claimUrl={claimUrl}
+            generateClaimCode={() => void generateClaimCode()}
+          />
+        ) : null}
+      </main>
+
+      <footer className="border-t-2 border-ink">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-6 text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} BayBlaze NFC</span>
+          <span>Questions? hello@bayblaze.net</span>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function PartnerDashboard({
+  downloadQr,
+  nextPayoutDate,
+  onCopyReferral,
+  partner,
+  qr,
+  referralLink,
+}: {
+  downloadQr: () => void;
+  nextPayoutDate: string;
+  onCopyReferral: () => void;
+  partner: PartnerPortalData;
+  qr: string;
+  referralLink?: string;
+}) {
+  return (
+    <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+      <section className="panel offset h-fit overflow-hidden">
+        <div className="border-b-2 border-ink bg-ink px-6 py-4">
+          <h2 className="eyebrow text-primary-foreground">Referral QR</h2>
+        </div>
+        <div className="p-6">
+          <h3 className="font-display text-2xl font-bold">{partner.partner?.displayName || partner.account?.displayName || "Affiliate"}</h3>
+          <p className="mt-1 font-bold text-muted-foreground">Status: {partner.partner?.status || partner.account?.status || "pending"}</p>
+          {qr ? <img alt={`QR code for ${partner.referralCode}`} className="mt-5 w-full border-2 border-ink bg-card" src={qr} /> : <EmptyState copy="Referral QR is not ready yet." />}
+          <p className="mt-4 break-all border-2 border-ink bg-paper-deep p-3 font-mono text-sm">{referralLink || "Referral link pending"}</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <button className="bb-button bb-button-primary offset-sm hover:-translate-x-[2px] hover:-translate-y-[2px]" disabled={!referralLink} onClick={onCopyReferral} type="button">Copy link</button>
+            <button className="bb-button offset-sm hover:-translate-x-[2px] hover:-translate-y-[2px]" disabled={!qr} onClick={downloadQr} type="button">Download QR</button>
+          </div>
+        </div>
       </section>
 
-      {mode === "partner" && partner ? (
-        <div className="mt-6 grid gap-6 lg:grid-cols-[360px_1fr]">
-          <section className="bb-panel p-5">
-            <h2 className="text-2xl font-black">{partner.partner?.displayName || partner.account?.displayName || "Affiliate"}</h2>
-            <p className="mt-1 font-bold text-[var(--bb-muted)]">Status: {partner.partner?.status || partner.account?.status || "pending"}</p>
-            {qr ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img alt={`QR code for ${partner.referralCode}`} className="mt-4 w-full border-2 border-black" src={qr} />
-            ) : null}
-            <p className="mt-4 break-all border-2 border-black bg-white p-3 font-mono text-sm">{referralLink || "Referral link pending"}</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              <button className="bb-button bb-button-primary" disabled={!referralLink} onClick={() => void copyReferral()} type="button">Copy link</button>
-              <button className="bb-button" disabled={!qr} onClick={downloadQr} type="button">Download QR</button>
-            </div>
-          </section>
-          <section className="grid gap-6">
-            <div className="grid gap-3 sm:grid-cols-4">
-              <Metric label="Purchases" value={String(partner.metrics?.completedOrders ?? 0)} />
-              <Metric label="Pending" value={formatMoney(partner.earnings?.pendingCents)} />
-              <Metric label="Available" value={formatMoney(partner.earnings?.eligibleCents)} />
-              <Metric label="Paid" value={formatMoney(partner.earnings?.paidCents)} />
-            </div>
-            <div className="bb-panel p-5">
-              <h2 className="text-xl font-black">Payouts</h2>
-              <p className="mt-2 font-bold text-[var(--bb-muted)]">Next request date: {nextPayoutDate}</p>
-              <Table rows={(partner.payouts || []).map((item) => [formatDate(item.createdAt), formatMoney(item.amountCents), item.status])} />
-            </div>
-            <div className="bb-panel p-5">
-              <h2 className="text-xl font-black">Commission Ledger</h2>
-              <Table rows={(partner.referrals || []).map((item) => [formatDate(item.date), item.customerLabel, item.orderStatus, item.commissionStatus, formatMoney(item.earnedCents)])} />
-            </div>
-          </section>
+      <section className="grid gap-6">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Metric label="Purchases" value={String(partner.metrics?.completedOrders ?? 0)} />
+          <Metric label="Pending" value={formatMoney(partner.earnings?.pendingCents)} />
+          <Metric label="Available" value={formatMoney(partner.earnings?.eligibleCents)} />
+          <Metric label="Paid" value={formatMoney(partner.earnings?.paidCents)} />
         </div>
-      ) : null}
 
-      {mode === "admin" && admin ? (
-        <div className="mt-6 grid gap-6">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Metric label="NFC orders" value={String(admin.metrics.orders)} />
-            <Metric label="Paid sales" value={formatMoney(admin.metrics.paidSalesCents)} />
-            <Metric label="Pending commissions" value={formatMoney(admin.metrics.pendingCommissionsCents)} />
+        <section className="panel offset p-6">
+          <SectionHeading hint={`Next request date: ${nextPayoutDate}`} step="Payouts" title="Weekly payout requests" />
+          <DataTable
+            empty="No payout requests yet."
+            rows={(partner.payouts || []).map((item) => [formatDate(item.createdAt), formatMoney(item.amountCents), item.status])}
+          />
+        </section>
+
+        <section className="panel offset p-6">
+          <SectionHeading hint="Customer details are intentionally limited for privacy." step="Ledger" title="Commission ledger" />
+          <DataTable
+            empty="No attributed purchases yet."
+            rows={(partner.referrals || []).map((item) => [formatDate(item.date), item.customerLabel, item.orderStatus, item.commissionStatus, formatMoney(item.earnedCents)])}
+          />
+        </section>
+      </section>
+    </div>
+  );
+}
+
+function AdminDashboard({
+  admin,
+  claimCode,
+  claimQr,
+  claimUrl,
+  generateClaimCode,
+}: {
+  admin: Awaited<ReturnType<typeof loadAdminDashboard>>;
+  claimCode: string;
+  claimQr: string;
+  claimUrl: string;
+  generateClaimCode: () => void;
+}) {
+  return (
+    <div className="grid gap-6">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Metric label="NFC orders" value={String(admin.metrics.orders)} />
+        <Metric label="Paid sales" value={formatMoney(admin.metrics.paidSalesCents)} />
+        <Metric label="Pending commissions" value={formatMoney(admin.metrics.pendingCommissionsCents)} />
+      </div>
+
+      <section className="panel offset overflow-hidden">
+        <div className="grid gap-6 p-6 lg:grid-cols-[1fr_260px]">
+          <div>
+            <span className="eyebrow text-emerald">Flyer claim QR</span>
+            <h2 className="mt-2 text-3xl leading-[1.05]">Print a code before the affiliate has an account</h2>
+            <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+              When the flyer QR is scanned, the person can sign in or register and claim the referral code for future sales.
+            </p>
+            <button className="bb-button bb-button-primary offset-sm mt-5 hover:-translate-x-[2px] hover:-translate-y-[2px]" onClick={generateClaimCode} type="button">Create claim QR</button>
           </div>
-          <section className="bb-panel p-5">
-            <h2 className="text-xl font-black">Flyer Claim QR</h2>
-            <p className="mt-2 text-sm font-bold text-[var(--bb-muted)]">Print this QR on a flyer before the affiliate has an account. When they scan it, they can sign in or register and claim the code.</p>
-            <button className="bb-button bb-button-primary mt-4" onClick={() => void generateClaimCode()} type="button">Create claim QR</button>
-            {claimQr ? (
-              <div className="mt-4 grid gap-3 lg:grid-cols-[220px_1fr]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img alt={`Claim QR code ${claimCode}`} className="w-full border-2 border-black bg-white" src={claimQr} />
-                <div>
-                  <p className="font-black">Code: {claimCode}</p>
-                  <p className="mt-2 break-all border-2 border-black bg-white p-3 font-mono text-xs">{claimUrl}</p>
-                  <button className="bb-button mt-3" onClick={() => { const anchor = document.createElement("a"); anchor.download = `bayblaze-claim-${claimCode.toLowerCase()}-qr.png`; anchor.href = claimQr; anchor.click(); }} type="button">Download QR</button>
-                </div>
-              </div>
-            ) : null}
-          </section>
-          <section className="bb-panel p-5">
-            <h2 className="text-xl font-black">Recent Orders</h2>
-            <pre className="mt-4 max-h-96 overflow-auto border-2 border-black bg-white p-4 text-xs">{JSON.stringify(admin.orders, null, 2)}</pre>
-          </section>
-          <section className="bb-panel p-5">
-            <h2 className="text-xl font-black">Commission Queue</h2>
-            <pre className="mt-4 max-h-96 overflow-auto border-2 border-black bg-white p-4 text-xs">{JSON.stringify(admin.commissionLedger, null, 2)}</pre>
-          </section>
+          {claimQr ? (
+            <div>
+              <img alt={`Claim QR code ${claimCode}`} className="w-full border-2 border-ink bg-card" src={claimQr} />
+              <p className="mt-3 font-display font-bold">Code: {claimCode}</p>
+            </div>
+          ) : (
+            <div className="flex min-h-48 items-center justify-center border-2 border-dashed border-ink bg-paper-deep p-4 text-center font-display text-sm font-bold text-muted-foreground">
+              QR preview appears here.
+            </div>
+          )}
         </div>
-      ) : null}
-    </main>
+        {claimUrl ? <p className="border-t-2 border-ink bg-paper-deep p-4 font-mono text-xs break-all">{claimUrl}</p> : null}
+      </section>
+
+      <section className="panel offset p-6">
+        <SectionHeading hint="Recent order activity from bayblaze-api." step="Orders" title="Recent orders" />
+        <DataTable empty="No recent orders." rows={unknownRows(admin.orders)} />
+      </section>
+
+      <section className="panel offset p-6">
+        <SectionHeading hint="Commission entries awaiting review or payout." step="Commissions" title="Commission queue" />
+        <DataTable empty="No commission entries." rows={unknownRows(admin.commissionLedger)} />
+      </section>
+    </div>
   );
 }
 
@@ -247,24 +370,15 @@ export function BayBlazeSignOnElement({
   }
 
   return (
-    <section
-      aria-labelledby="bayblaze-auth-heading"
-      className="mx-auto mt-6 w-full max-w-[520px] border-2 border-black bg-white p-5 shadow-[6px_6px_0_#000] sm:p-8"
-    >
-      <h2
-        className="mb-6 text-center text-4xl font-black uppercase leading-none text-black sm:text-5xl"
-        id="bayblaze-auth-heading"
-      >
-        {heading}
-      </h2>
+    <section aria-labelledby="bayblaze-auth-heading" className="panel offset mx-auto w-full max-w-[560px] p-6 sm:p-8">
+      <span className="eyebrow text-emerald">BayBlaze account</span>
+      <h2 className="mt-3 text-center text-4xl leading-none sm:text-5xl" id="bayblaze-auth-heading">{heading}</h2>
 
       {allowRegister ? (
-        <div className="mb-6 grid grid-cols-2 border-2 border-black bg-white">
+        <div className="mt-6 grid grid-cols-2 border-2 border-ink bg-card">
           <button
             aria-pressed={authMode === "login"}
-            className={`h-12 border-r-2 border-black text-[14px] font-extrabold uppercase tracking-widest transition-colors ${
-              authMode === "login" ? "bg-black text-white" : "bg-white text-black hover:bg-[var(--bb-lime)]"
-            }`}
+            className={`h-12 border-r-2 border-ink font-display text-sm font-bold uppercase tracking-[0.16em] transition-colors ${authMode === "login" ? "bg-ink text-primary-foreground" : "bg-card hover:bg-sky"}`}
             onClick={() => {
               setAuthMode("login");
               setLocalError("");
@@ -275,9 +389,7 @@ export function BayBlazeSignOnElement({
           </button>
           <button
             aria-pressed={authMode === "register"}
-            className={`h-12 text-[14px] font-extrabold uppercase tracking-widest transition-colors ${
-              authMode === "register" ? "bg-black text-white" : "bg-white text-black hover:bg-[var(--bb-lime)]"
-            }`}
+            className={`h-12 font-display text-sm font-bold uppercase tracking-[0.16em] transition-colors ${authMode === "register" ? "bg-ink text-primary-foreground" : "bg-card hover:bg-sky"}`}
             onClick={() => {
               setAuthMode("register");
               setLocalError("");
@@ -290,17 +402,17 @@ export function BayBlazeSignOnElement({
       ) : null}
 
       <a
-        className="mb-5 flex h-12 w-full items-center justify-center gap-3 border-2 border-black bg-white px-4 text-center text-[14px] font-extrabold uppercase tracking-wider text-black transition-colors hover:bg-black hover:text-white"
+        className="mt-5 flex h-12 w-full items-center justify-center gap-3 border-2 border-ink bg-card px-4 text-center font-display text-sm font-bold uppercase tracking-[0.12em] transition-colors hover:bg-ink hover:text-primary-foreground"
         href={googleHref}
       >
-        <span aria-hidden="true" className="grid size-5 place-items-center border-2 border-black bg-white text-[12px] font-black leading-none text-black">G</span>
+        <span aria-hidden="true" className="grid size-5 place-items-center border-2 border-ink bg-card text-xs font-bold leading-none text-ink">G</span>
         Continue with Google
       </a>
 
-      <div className="mb-5 flex items-center gap-3 text-[12px] font-extrabold uppercase tracking-[0.16em] text-[var(--bb-muted)]">
-        <span className="h-0.5 flex-1 bg-black" />
+      <div className="my-5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+        <span className="h-0.5 flex-1 bg-ink" />
         <span>Email</span>
-        <span className="h-0.5 flex-1 bg-black" />
+        <span className="h-0.5 flex-1 bg-ink" />
       </div>
 
       <form className="space-y-5" onSubmit={handleSubmit}>
@@ -320,15 +432,9 @@ export function BayBlazeSignOnElement({
           value={form.password}
         />
 
-        <p aria-live="polite" className="min-h-6 border-2 border-transparent text-[14px] font-bold text-[var(--bb-red)]">
-          {localError || submitError}
-        </p>
+        <p aria-live="polite" className="min-h-6 text-sm font-bold text-destructive">{localError || submitError}</p>
 
-        <button
-          className="bb-button bb-button-primary flex h-[52px] w-full"
-          disabled={isSubmitting}
-          type="submit"
-        >
+        <button className="bb-button bb-button-primary offset-sm flex h-[52px] w-full hover:-translate-x-[2px] hover:-translate-y-[2px]" disabled={isSubmitting} type="submit">
           {isSubmitting
             ? authMode === "login" ? "Signing in..." : "Creating account..."
             : authMode === "login" ? "Sign in" : "Create account"}
@@ -354,11 +460,11 @@ function AuthInput({
   value: string;
 }) {
   return (
-    <label className="block text-[13px] font-extrabold uppercase tracking-widest text-black">
-      {label}
+    <label className="block">
+      <span className="eyebrow">{label}</span>
       <input
         autoComplete={autoComplete}
-        className="bb-input mt-2 h-12 text-[16px] font-medium normal-case tracking-normal"
+        className="bb-input mt-2 h-12"
         minLength={minLength}
         onChange={(event) => onChange(event.target.value)}
         required
@@ -369,28 +475,72 @@ function AuthInput({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function SectionHeading({ hint, step, title }: { hint?: string; step: string; title: string }) {
   return (
-    <div className="bb-card bg-white p-4">
-      <p className="text-xs font-black uppercase tracking-wider text-[var(--bb-muted)]">{label}</p>
-      <p className="mt-2 text-2xl font-black">{value}</p>
+    <div className="mb-6 flex flex-col gap-2 border-b-2 border-ink pb-5">
+      <span className="eyebrow text-emerald">{step}</span>
+      <h2 className="text-3xl leading-[1.05]">{title}</h2>
+      {hint ? <p className="max-w-2xl text-sm text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
 
-function Table({ rows }: { rows: string[][] }) {
-  if (!rows.length) return <p className="mt-4 border-2 border-black bg-white p-4 font-bold">No activity yet.</p>;
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="mt-4 overflow-x-auto border-2 border-black bg-white">
+    <div className="panel offset-sm bg-card p-5">
+      <p className="eyebrow text-muted-foreground">{label}</p>
+      <p className="mt-2 font-display text-3xl font-bold">{value}</p>
+    </div>
+  );
+}
+
+function DataTable({ empty, rows }: { empty: string; rows: string[][] }) {
+  if (!rows.length) return <EmptyState copy={empty} />;
+  return (
+    <div className="overflow-x-auto border-2 border-ink bg-card">
       <table className="w-full min-w-[620px] text-left text-sm">
         <tbody>
-          {rows.map((row, index) => (
-            <tr className="border-t-2 border-black first:border-t-0" key={`${row.join(":")}-${index}`}>
-              {row.map((cell) => <td className="p-3 font-bold" key={cell}>{cell}</td>)}
+          {rows.map((row, rowIndex) => (
+            <tr className="border-t-2 border-ink first:border-t-0" key={`${row.join(":")}-${rowIndex}`}>
+              {row.map((cell, cellIndex) => <td className="p-3 font-bold" key={`${cell}-${cellIndex}`}>{cell}</td>)}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
+}
+
+function EmptyState({ copy }: { copy: string }) {
+  return (
+    <p className="border-2 border-dashed border-ink bg-paper-deep p-4 text-center font-display text-sm font-bold text-muted-foreground">
+      {copy}
+    </p>
+  );
+}
+
+function unknownRows(items: unknown[]) {
+  return items.slice(0, 20).map((item) => {
+    if (!item || typeof item !== "object") return [String(item)];
+    const record = item as Record<string, unknown>;
+    const preferred = ["createdAt", "date", "id", "orderId", "customerLabel", "status", "commissionStatus", "amountCents", "earnedCents", "totalCents"];
+    const cells = preferred
+      .filter((key) => key in record)
+      .map((key) => formatUnknownValue(record[key]));
+    if (cells.length) return cells;
+    return Object.entries(record).slice(0, 5).map(([, value]) => formatUnknownValue(value));
+  });
+}
+
+function formatUnknownValue(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 999 ? formatMoney(value) : String(value);
+  }
+  if (typeof value === "string") {
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) return formatDate(value);
+    return value;
+  }
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (value == null) return "-";
+  return JSON.stringify(value);
 }

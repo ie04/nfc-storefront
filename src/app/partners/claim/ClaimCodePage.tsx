@@ -56,39 +56,53 @@ export default function ClaimCodePage({ code }: { code: string }) {
   }
 
   return (
-    <main className="mx-auto grid min-h-screen max-w-5xl place-items-center px-4 py-8">
-      <section className="bb-panel w-full p-5 sm:p-8">
-        <p className="font-black uppercase tracking-[0.18em] text-[var(--bb-green)]">BayBlaze NFC Affiliates</p>
-        <h1 className="mt-2 text-4xl font-black leading-none sm:text-6xl">Claim your flyer QR.</h1>
-        <p className="mt-4 max-w-2xl text-lg font-semibold text-[var(--bb-muted)]">
-          Sign in or create your BayBlaze account, and this printed QR code becomes your affiliate link.
-        </p>
+    <main className="min-h-screen bg-background px-5 py-10 sm:py-14">
+      <section className="panel offset mx-auto w-full max-w-5xl overflow-hidden">
+        <div className="grid gap-8 p-8 sm:p-12 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <p className="eyebrow text-emerald">BayBlaze NFC Affiliates</p>
+            <h1 className="mt-5 text-5xl leading-[0.95] sm:text-6xl">Claim your flyer QR.</h1>
+            <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
+              Sign in or create your BayBlaze account, and this printed QR code becomes your affiliate link.
+            </p>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            alt="3D printed green NFC keychain tag with a custom star design"
+            className="hidden h-40 w-40 object-contain drop-shadow-[8px_10px_0_rgba(0,0,0,0.18)] lg:block"
+            height={816}
+            src="/assets/tag-custom.png"
+            width={816}
+          />
+        </div>
 
         {claimCode ? (
-          <div className="mt-5 border-2 border-black bg-[var(--bb-sky)] p-4">
-            <p className="text-sm font-black uppercase tracking-wider">Flyer code</p>
-            <p className="mt-1 font-mono text-2xl font-black">{claimCode.code}</p>
+          <div className="border-t-2 border-ink bg-sky p-6 sm:px-12">
+            <p className="eyebrow">Flyer code</p>
+            <p className="mt-1 font-mono text-2xl font-bold">{claimCode.code}</p>
           </div>
         ) : null}
 
-        {message ? <p className="mt-4 border-2 border-black bg-[var(--bb-lime)] p-3 font-black">{message}</p> : null}
-        {error ? <p className="mt-4 border-2 border-[var(--bb-red)] bg-white p-3 font-black text-[var(--bb-red)]">{error}</p> : null}
+        <div className="p-8 sm:p-12">
+          {message ? <p className="panel offset-sm mb-4 bg-sky p-4 font-display text-sm font-bold">{message}</p> : null}
+          {error ? <p className="panel offset-sm mb-4 border-destructive bg-card p-4 font-display text-sm font-bold text-destructive">{error}</p> : null}
 
-        {claimed && claimCode ? (
-          <div className="mt-6 grid gap-3">
-            <p className="font-bold">Your QR is ready. Anyone who scans this flyer now goes through your affiliate referral.</p>
-            <Link className="bb-button bb-button-primary w-fit" href={`/?ref=${encodeURIComponent(claimCode.code)}`}>Open my referral page</Link>
-          </div>
-        ) : token && claimCode?.status === "unclaimed" ? (
-          <button className="bb-button bb-button-primary mt-6" onClick={() => void claimWithToken()} type="button">Claim this QR code</button>
-        ) : claimCode?.status === "unclaimed" ? (
-          <BayBlazeSignOnElement
-            allowRegister
-            heading="Sign In"
-            onSubmit={submitAuth}
-            submitError={error}
-          />
-        ) : null}
+          {claimed && claimCode ? (
+            <div className="grid gap-4">
+              <p className="font-display text-lg font-bold">Your QR is ready. Anyone who scans this flyer now goes through your affiliate referral.</p>
+              <Link className="bb-button bb-button-primary offset-sm w-fit hover:-translate-x-[2px] hover:-translate-y-[2px]" href={`/?ref=${encodeURIComponent(claimCode.code)}`}>Open my referral page</Link>
+            </div>
+          ) : token && claimCode?.status === "unclaimed" ? (
+            <button className="bb-button bb-button-primary offset-sm hover:-translate-x-[2px] hover:-translate-y-[2px]" onClick={() => void claimWithToken()} type="button">Claim this QR code</button>
+          ) : claimCode?.status === "unclaimed" ? (
+            <BayBlazeSignOnElement
+              allowRegister
+              heading="Sign in"
+              onSubmit={submitAuth}
+              submitError={error}
+            />
+          ) : null}
+        </div>
       </section>
     </main>
   );
