@@ -18,8 +18,9 @@
 - Offline flyer QR codes use claim URLs before an affiliate account exists:
   `https://nfc.bayblaze.net/partners/claim?code=<affiliate-code>`. The claim
   page must ask the scanner to sign in or register, then call `bayblaze-api` to
-  attach the code to that BayBlaze account. Once a code is claimed, the same
-  claim URL should send future scanners to `/?ref=<affiliate-code>`.
+  attach the code to that BayBlaze account. After a successful claim, send the
+  affiliate to `/partners`. If a scanner opens an already-claimed claim URL,
+  redirect them to `/partners` rather than to the customer ordering page.
 - The admin dashboard should load all created flyer claim QR codes from
   `GET /v1/admin/partners/claim-codes` and render the full list with per-code
   QR previews/actions. Do not regress to showing only the latest code generated

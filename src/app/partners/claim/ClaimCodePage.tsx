@@ -21,7 +21,7 @@ export default function ClaimCodePage({ code }: { code: string }) {
       .then((result) => {
         setClaimCode(result.claimCode);
         if (result.claimCode.status === "claimed") {
-          window.location.replace(result.claimCode.referralUrl || `/?ref=${encodeURIComponent(result.claimCode.code)}`);
+          window.location.replace("/partners");
         }
       })
       .catch((caught: Error) => setError(caught.message));
@@ -50,6 +50,7 @@ export default function ClaimCodePage({ code }: { code: string }) {
       setClaimCode(result.claimCode);
       setClaimed(true);
       setMessage(`You claimed affiliate code ${result.claimCode.code}.`);
+      window.location.replace("/partners");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not claim this affiliate QR.");
     }
@@ -107,7 +108,7 @@ export default function ClaimCodePage({ code }: { code: string }) {
                 <p className="mt-4 max-w-xl text-lg font-medium text-muted-foreground">
                   Anyone who scans this flyer now goes through your affiliate referral.
                 </p>
-                <Link className="bb-button bb-button-primary offset-sm mt-6 w-fit hover:-translate-x-[2px] hover:-translate-y-[2px]" href={`/?ref=${encodeURIComponent(claimCode.code)}`}>Open my referral page</Link>
+                <Link className="bb-button bb-button-primary offset-sm mt-6 w-fit hover:-translate-x-[2px] hover:-translate-y-[2px]" href="/partners">Open affiliate portal</Link>
               </div>
             ) : token && claimCode?.status === "unclaimed" ? (
               <div className="panel offset bg-card p-6 sm:p-8">
