@@ -146,7 +146,7 @@ export async function loadAdminDashboard(token: string) {
       metrics: { orders: number; paidSalesCents: number; pendingCommissionsCents: number };
       orders: unknown[];
     }>("/v1/admin/nfc/summary", { token }),
-    listAdminPartnerClaimCodes(token).catch(() => ({ items: [], total: 0 })),
+    listAdminPartnerClaimCodes(token),
   ]);
 
   return {
