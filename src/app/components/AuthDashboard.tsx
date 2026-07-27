@@ -21,6 +21,7 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
   const [qr, setQr] = useState("");
   const [claimQrs, setClaimQrs] = useState<Record<string, string>>({});
   const [claimBusy, setClaimBusy] = useState(false);
+  const [pdfBusyCode, setPdfBusyCode] = useState("");
   const title = mode === "partner" ? "Affiliate Portal" : "NFC Admin";
   const subtitle = mode === "partner"
     ? "Track your referral QR, attributed orders, and payout history."
@@ -116,6 +117,20 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
       setError(caught instanceof Error ? caught.message : "Could not create a claim QR.");
     } finally {
       setClaimBusy(false);
+    }
+  }
+
+  async function downloadExistingClaimFlyer(code: string) {
+    setError("");
+    setMessage("");
+    setPdfBusyCode(code);
+    try {
+      await downloadClaimFlyerPdf(code);
+      setMessage(`Claim flyer ${code} downloaded.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not download that flyer PDF.");
+    } finally {
+      setPdfBusyCode("");
     }
   }
 
@@ -219,9 +234,11 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
             claimQrs={claimQrs}
             generateClaimCode={() => void generateClaimCode()}
             generateClaimFlyer={() => void generateClaimCode({ downloadFlyer: true })}
+            onDownloadClaimFlyer={(code) => void downloadExistingClaimFlyer(code)}
             onCopyClaimLink={(url) => {
               void navigator.clipboard.writeText(url).then(() => setMessage("Claim link copied."));
             }}
+            pdfBusyCode={pdfBusyCode}
           />
         ) : null}
       </main>
@@ -303,14 +320,18 @@ function AdminDashboard({
   claimQrs,
   generateClaimCode,
   generateClaimFlyer,
+  onDownloadClaimFlyer,
   onCopyClaimLink,
+  pdfBusyCode,
 }: {
   admin: Awaited<ReturnType<typeof loadAdminDashboard>>;
   claimBusy: boolean;
   claimQrs: Record<string, string>;
   generateClaimCode: () => void;
   generateClaimFlyer: () => void;
+  onDownloadClaimFlyer: (code: string) => void;
   onCopyClaimLink: (url: string) => void;
+  pdfBusyCode: string;
 }) {
   const claimCodes = admin.claimCodes || [];
 
@@ -329,7 +350,7 @@ function AdminDashboard({
               <span className="eyebrow text-emerald">Claim codes</span>
               <h2 className="mt-2 text-3xl leading-[1.05]">Created flyer QR codes</h2>
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                {claimCodes.length} flyer QR code{claimCodes.length === 1 ? "" : "s"} ready to print, share, or review.
+                {claimCodes.length} flyer QR code{claimCodes.length === 1 ? "" : "s"} ready to download as PDFs, share, or review.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -347,7 +368,7 @@ function AdminDashboard({
                 onClick={generateClaimFlyer}
                 type="button"
               >
-                {claimBusy ? "Creating..." : "Create Flyer"}
+                {claimBusy ? "Creating..." : "Create Flyer PDF"}
               </button>
             </div>
           </div>
@@ -359,7 +380,9 @@ function AdminDashboard({
               <ClaimCodeCard
                 item={item}
                 key={item.code}
+                onDownloadClaimFlyer={onDownloadClaimFlyer}
                 onCopyClaimLink={onCopyClaimLink}
+                pdfBusy={pdfBusyCode === item.code}
                 qr={claimQrs[item.code] || ""}
               />
             ))}
@@ -386,11 +409,15 @@ function AdminDashboard({
 
 function ClaimCodeCard({
   item,
+  onDownloadClaimFlyer,
   onCopyClaimLink,
+  pdfBusy,
   qr,
 }: {
   item: PartnerClaimCode;
+  onDownloadClaimFlyer: (code: string) => void;
   onCopyClaimLink: (url: string) => void;
+  pdfBusy: boolean;
   qr: string;
 }) {
   const statusClass = item.status === "claimed"
@@ -444,9 +471,12 @@ function ClaimCodeCard({
 
       <p className="border-t-2 border-ink bg-paper-deep p-3 font-mono text-xs break-all">{item.claimUrl}</p>
 
-      <div className="grid gap-2 border-t-2 border-ink p-4 sm:grid-cols-3">
+      <div className="grid gap-2 border-t-2 border-ink p-4 sm:grid-cols-2">
         <button className="bb-button offset-sm min-h-10 px-2 py-2 text-xs hover:-translate-x-[2px] hover:-translate-y-[2px]" onClick={() => onCopyClaimLink(item.claimUrl)} type="button">Copy</button>
-        <Link className="bb-button offset-sm min-h-10 px-2 py-2 text-xs hover:-translate-x-[2px] hover:-translate-y-[2px]" href={`/flyer/claim/${encodeURIComponent(item.code)}`} target="_blank">Flyer</Link>
+        <button className="bb-button bb-button-primary offset-sm min-h-10 px-2 py-2 text-xs hover:-translate-x-[2px] hover:-translate-y-[2px]" disabled={pdfBusy} onClick={() => onDownloadClaimFlyer(item.code)} type="button">
+          {pdfBusy ? "Downloading..." : "Download PDF"}
+        </button>
+        <Link className="bb-button offset-sm min-h-10 px-2 py-2 text-xs hover:-translate-x-[2px] hover:-translate-y-[2px]" href={`/flyer/claim/${encodeURIComponent(item.code)}`} target="_blank">Preview</Link>
         <Link className="bb-button bb-button-primary offset-sm min-h-10 px-2 py-2 text-xs hover:-translate-x-[2px] hover:-translate-y-[2px]" href={item.claimUrl} target="_blank">Open</Link>
       </div>
     </article>

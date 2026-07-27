@@ -28,7 +28,8 @@
 - The admin dashboard `Create Flyer` action creates a new unclaimed claim code,
   renders `/flyer/claim/{code}?pdf=1` in a hidden same-origin iframe, converts
   the Letter-size flyer to a one-page PDF with `html2canvas` + `jspdf`, and
-  automatically downloads it.
+  automatically downloads it. Existing claim-code cards should also expose a
+  clear `Download PDF` action, plus preview/open/copy actions.
 - Printable referral flyers live at `/flyer` for a blank template and
   `/flyer/{refCode}` for a personalized QR flyer. Flyer QR codes point to
   `https://nfc.bayblaze.net/r/{refCode}`. The `/r/{refCode}` route sets the
