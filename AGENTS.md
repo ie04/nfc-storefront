@@ -26,10 +26,12 @@
   QR previews/actions. Do not regress to showing only the latest code generated
   in local component state.
 - The admin dashboard `Create Flyer` action creates a new unclaimed claim code,
-  renders the Letter-size flyer directly into a one-page PDF with `jspdf`, and
-  automatically downloads it. Existing claim-code cards should also expose a
-  clear `Download PDF` action, plus preview/open/copy actions. Do not rely on a
-  hidden iframe screenshot for PDF generation; it has proven unreliable.
+  calls `/api/flyer/claim/{code}/pdf`, which prints the real
+  `/flyer/claim/{code}?pdf=1` HTML route to a one-page Letter PDF with
+  headless Chromium. Existing claim-code cards should also expose a clear
+  `Download PDF` action, plus preview/open/copy actions. Do not maintain a
+  second hand-drawn PDF layout; PDF output must stay pixel-aligned with the HTML
+  flyer source.
 - Printable referral flyers live at `/flyer` for a blank template and
   `/flyer/{refCode}` for a personalized QR flyer. Flyer QR codes point to
   `https://nfc.bayblaze.net/r/{refCode}`. The `/r/{refCode}` route sets the
