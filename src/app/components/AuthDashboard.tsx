@@ -153,12 +153,13 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
               />
             </div>
           </div>
-          <div className="border-t-2 border-ink bg-sky px-8 py-5 sm:px-12">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <p className="font-display text-sm font-bold">Same BayBlaze account sign-on. Same NFC visual system.</p>
-              {token ? <button className="bb-button offset-sm bg-card hover:-translate-x-[2px] hover:-translate-y-[2px]" onClick={signOut} type="button">Sign out</button> : null}
+          {token ? (
+            <div className="border-t-2 border-ink bg-sky px-8 py-5 sm:px-12">
+              <div className="flex justify-end">
+                <button className="bb-button offset-sm bg-card hover:-translate-x-[2px] hover:-translate-y-[2px]" onClick={signOut} type="button">Sign out</button>
+              </div>
             </div>
-          </div>
+          ) : null}
         </section>
 
         {error ? <p className="panel offset-sm border-destructive bg-card p-4 font-display text-sm font-bold text-destructive">{error}</p> : null}
