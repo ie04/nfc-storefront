@@ -90,7 +90,7 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
     setMessage("QR code download started.");
   }
 
-  async function generateClaimCode({ openFlyer = false }: { openFlyer?: boolean } = {}) {
+  async function generateClaimCode({ downloadFlyer = false }: { downloadFlyer?: boolean } = {}) {
     if (!token) return;
     setError("");
     setMessage("");
@@ -106,9 +106,9 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
             ],
           }
         : current);
-      if (openFlyer) {
-        window.open(`/flyer/claim/${encodeURIComponent(result.claimCode.code)}`, "_blank", "noopener,noreferrer");
-        setMessage(`Claim flyer ${result.claimCode.code} opened in a new tab.`);
+      if (downloadFlyer) {
+        await downloadClaimFlyerPdf(result.claimCode.code);
+        setMessage(`Claim flyer ${result.claimCode.code} downloaded.`);
       } else {
         setMessage(`Claim QR ${result.claimCode.code} is ready to print.`);
       }
@@ -218,7 +218,7 @@ export default function AuthDashboard({ mode }: { mode: Mode }) {
             claimBusy={claimBusy}
             claimQrs={claimQrs}
             generateClaimCode={() => void generateClaimCode()}
-            generateClaimFlyer={() => void generateClaimCode({ openFlyer: true })}
+            generateClaimFlyer={() => void generateClaimCode({ downloadFlyer: true })}
             onCopyClaimLink={(url) => {
               void navigator.clipboard.writeText(url).then(() => setMessage("Claim link copied."));
             }}
@@ -347,7 +347,7 @@ function AdminDashboard({
                 onClick={generateClaimFlyer}
                 type="button"
               >
-                {claimBusy ? "Creating..." : "Create claim flyer"}
+                {claimBusy ? "Creating..." : "Create Flyer"}
               </button>
             </div>
           </div>
@@ -451,6 +451,70 @@ function ClaimCodeCard({
       </div>
     </article>
   );
+}
+
+async function downloadClaimFlyerPdf(code: string) {
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.border = "0";
+  iframe.style.height = "1056px";
+  iframe.style.left = "-10000px";
+  iframe.style.opacity = "0";
+  iframe.style.pointerEvents = "none";
+  iframe.style.position = "fixed";
+  iframe.style.top = "0";
+  iframe.style.width = "816px";
+  iframe.src = `/flyer/claim/${encodeURIComponent(code)}?pdf=1`;
+  document.body.appendChild(iframe);
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(new Error("Flyer preview took too long to load.")), 15000);
+      iframe.addEventListener("load", () => {
+        window.clearTimeout(timeout);
+        resolve();
+      }, { once: true });
+    });
+
+    const iframeDocument = iframe.contentDocument;
+    if (!iframeDocument) throw new Error("Could not prepare the flyer PDF.");
+    await iframeDocument.fonts?.ready;
+    await waitForImages(iframeDocument);
+
+    const flyerPage = iframeDocument.querySelector<HTMLElement>(".flyer-page");
+    if (!flyerPage) throw new Error("Could not find the flyer artwork.");
+
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ]);
+    const canvas = await html2canvas(flyerPage, {
+      backgroundColor: "#f8f8f3",
+      height: 1056,
+      logging: false,
+      scale: 2,
+      useCORS: true,
+      width: 816,
+      windowHeight: 1056,
+      windowWidth: 816,
+    });
+    const pdf = new jsPDF({ compress: true, format: "letter", orientation: "portrait", unit: "in" });
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 8.5, 11);
+    pdf.save(`bayblaze-claim-flyer-${code.toLowerCase()}.pdf`);
+  } finally {
+    iframe.remove();
+  }
+}
+
+async function waitForImages(document: Document) {
+  const images = Array.from(document.images);
+  await Promise.all(images.map((image) => {
+    if (image.complete && image.naturalWidth > 0) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      image.addEventListener("load", () => resolve(), { once: true });
+      image.addEventListener("error", () => resolve(), { once: true });
+    });
+  }));
 }
 
 export type AuthMode = "login" | "register";

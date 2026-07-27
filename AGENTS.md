@@ -24,6 +24,10 @@
   `GET /v1/admin/partners/claim-codes` and render the full list with per-code
   QR previews/actions. Do not regress to showing only the latest code generated
   in local component state.
+- The admin dashboard `Create Flyer` action creates a new unclaimed claim code,
+  renders `/flyer/claim/{code}?pdf=1` in a hidden same-origin iframe, converts
+  the Letter-size flyer to a one-page PDF with `html2canvas` + `jspdf`, and
+  automatically downloads it.
 - Printable referral flyers live at `/flyer` for a blank template and
   `/flyer/{refCode}` for a personalized QR flyer. Flyer QR codes point to
   `https://nfc.bayblaze.net/r/{refCode}`. The `/r/{refCode}` route sets the

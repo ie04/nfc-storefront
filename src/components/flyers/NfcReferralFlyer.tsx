@@ -31,6 +31,7 @@ const TAGS = [
 ];
 
 export type NfcReferralFlyerProps = {
+  fitToViewport?: boolean;
   qrTitle?: string;
   qrUrl?: string;
   refCode?: string;
@@ -40,6 +41,7 @@ export type NfcReferralFlyerProps = {
 };
 
 export function NfcReferralFlyer({
+  fitToViewport = true,
   qrTitle,
   qrUrl,
   refCode,
@@ -53,6 +55,9 @@ export function NfcReferralFlyer({
   const qrValue = qrUrl || (refCode ? `${baseUrl}/r/${encodeURIComponent(refCode)}` : "");
 
   useEffect(() => {
+    if (!fitToViewport) {
+      return;
+    }
     const fit = () => {
       const el = shellRef.current;
       if (!el) return;
@@ -63,7 +68,7 @@ export function NfcReferralFlyer({
     fit();
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
-  }, []);
+  }, [fitToViewport]);
 
   return (
     <main

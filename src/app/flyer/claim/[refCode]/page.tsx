@@ -7,13 +7,21 @@ export const metadata: Metadata = {
   title: "BayBlaze Custom NFC Tags - Claim Flyer",
 };
 
-export default async function ClaimFlyerPage({ params }: { params: Promise<{ refCode: string }> }) {
+export default async function ClaimFlyerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ refCode: string }>;
+  searchParams: Promise<{ pdf?: string }>;
+}) {
   const { refCode } = await params;
+  const { pdf } = await searchParams;
   const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://nfc.bayblaze.net").replace(/\/+$/, "");
   const qrUrl = `${baseUrl}/partners/claim?code=${encodeURIComponent(refCode)}`;
 
   return (
     <NfcReferralFlyer
+      fitToViewport={pdf !== "1"}
       qrTitle={`BayBlaze NFC affiliate claim QR for ${refCode}`}
       qrUrl={qrUrl}
       refCode={refCode}
