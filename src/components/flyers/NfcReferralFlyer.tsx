@@ -144,7 +144,7 @@ export function NfcReferralFlyer({
                   >
                     <img
                       alt={`${label} BayBlaze NFC keychain tag`}
-                      className="h-[0.72in] w-[0.72in] object-contain"
+                      className="h-[0.94in] w-[0.94in] object-contain"
                       src={src}
                     />
                     <figcaption className="mt-2 text-[10.5px] font-medium uppercase tracking-[0.12em] text-bb-muted">
