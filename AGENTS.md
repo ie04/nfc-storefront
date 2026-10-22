@@ -54,3 +54,13 @@
 
 When code changes are complete, automatically commit and push the changes unless
 the user explicitly says not to.
+
+## October 2026 Frontend Configuration Refresh
+
+- Production and preview Vercel backend configuration was refreshed after the
+  OVHcloud migration. `BAYBLAZE_API_URL` and `NEXT_PUBLIC_BAYBLAZE_API_URL` both target
+  `https://api.bayblaze.net`. NFC routes use public or account-session auth;
+  this app does not need the shared API service token.
+- Redeploy after Vercel environment changes. Service-token synchronization and
+  browser session recovery are separate concerns; old account sessions may
+  require a fresh sign-in after the backend signing secret changes.
